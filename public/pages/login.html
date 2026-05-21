@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>FlotaControl 360 — Iniciar sesión</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="../assets/css/login.css"/>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- ═══ VIDEO SIDE ═══ -->
+  <div class="video-side">
+    <video autoplay muted loop playsinline>
+<source src="../assets/video/login.mp4" type="video/mp4"/>    </video>
+
+    <div class="video-overlay">
+      <div class="video-tag">Sistema de gestión</div>
+      <h2 class="video-title">Control total<br/>de tu <span>flota</span></h2>
+      <p class="video-desc">
+        Monitorea, administra y optimiza cada vehículo en tiempo real desde una sola plataforma inteligente.
+      </p>
+      <div class="video-stats">
+        <div class="stat">
+          <span class="stat-num">360°</span>
+          <span class="stat-label">Visibilidad</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <span class="stat-num">24/7</span>
+          <span class="stat-label">Monitoreo</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat">
+          <span class="stat-num">100%</span>
+          <span class="stat-label">En la nube</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ FORM SIDE ═══ -->
+  <div class="form-side">
+    <div class="glass-card">
+
+      <div class="logo-row">
+        <div class="logo-icon">
+          <svg width="22" height="22" viewBox="0 0 32 32" fill="none">
+            <path d="M6 22 Q16 8 26 22" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <circle cx="16" cy="22" r="3" fill="white"/>
+            <circle cx="9" cy="22" r="2" fill="white" opacity=".6"/>
+            <circle cx="23" cy="22" r="2" fill="white" opacity=".6"/>
+          </svg>
+        </div>
+        <div class="logo-text">
+          <div class="logo-name">FlotaControl</div>
+          <div class="logo-sub">360° Platform</div>
+        </div>
+      </div>
+
+      <h1 class="form-heading">Bienvenido</h1>
+      <p class="form-sub">Ingresa tus credenciales para continuar</p>
+
+      <div id="login-error" class="alert-error" style="display:none"></div>
+
+      <form id="form-login" class="fields">
+        <div class="field-group">
+          <label>Correo electrónico</label>
+          <input type="email" id="inp-correo" placeholder="usuario@empresa.com" required/>
+        </div>
+        <div class="field-group">
+          <label>Contraseña</label>
+          <div class="pw-wrap">
+            <input type="password" id="inp-pass" placeholder="••••••••" required/>
+            <button type="button" class="pw-toggle"
+              onclick="this.previousElementSibling.type=this.previousElementSibling.type==='password'?'text':'password'">👁</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" id="btn-login">
+          <span>Ingresar</span>
+          <div class="btn-loader" style="display:none"></div>
+        </button>
+      </form>
+
+      <div class="form-footer">
+        <a href="home.html">← Volver al inicio</a>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/login.js"></script>
+
+</body>
+</html>
