@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>FlotaControl 360 — Administrador</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<link rel="stylesheet" href="../assets/css/style.css"/>
+
+
+<style>
+/* ── Campana de alertas (fc-bell-btn / fc-notif-panel) ─────────────────────── */
+#fc-bell-btn {
+  position: relative; cursor: pointer;
+  background: #e4e6ea; border: none;
+  width: 40px; height: 40px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; transition: background .15s;
+  flex-shrink: 0;
+}
+#fc-bell-btn:hover { background: #d8dadf; }
+#fc-bell-count {
+  position: absolute; top: -3px; right: -3px;
+  background: #e84a3a; color: #fff;
+  font-size: 11px; font-weight: 800;
+  width: 18px; height: 18px; border-radius: 50%;
+  display: none; align-items: center; justify-content: center;
+  border: 2px solid #fff;
+}
+#fc-notif-panel {
+  position: fixed; top: 68px; right: 20px;
+  width: 360px; background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 12px 48px rgba(0,0,0,.15), 0 0 0 1px rgba(0,0,0,.05);
+  z-index: 9800; max-height: 85vh;
+  display: flex; flex-direction: column;
+  transform-origin: top right;
+  transform: scale(.95); opacity: 0;
+  transition: all .25s cubic-bezier(.22,1,.36,1);
+  pointer-events: none;
+  font-family: 'Outfit', sans-serif;
+}
+#fc-notif-panel.open {
+  transform: scale(1); opacity: 1; pointer-events: auto;
+}
+.fc-np-header {
+  padding: 20px 20px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.fc-np-title { font-size: 22px; font-weight: 800; color: #000; }
+.fc-btn-text {
+  background: none; border: none; color: #0064d1;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+  padding: 6px 10px; border-radius: 6px;
+}
+.fc-btn-text:hover { background: #f0f2f5; }
+.fc-np-tabs { display: flex; gap: 8px; padding: 0 16px 12px; }
+.fc-np-tab {
+  padding: 8px 16px; border-radius: 20px;
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  border: none; transition: all .2s;
+  background: #f0f2f5; color: #65676b;
+}
+.fc-np-tab.active { background: #e7f3ff; color: #0064d1; }
+.fc-np-tab:hover:not(.active) { background: #e4e6e9; }
+.fc-np-list { overflow-y: auto; flex: 1; padding: 0 8px 12px; }
+.fc-np-section-label {
+  font-size: 15px; font-weight: 800; color: #000;
+  padding: 12px 12px 4px;
+}
+.fc-np-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: 12px;
+  cursor: pointer; transition: background .2s; position: relative;
+}
+.fc-np-item:hover { background: #f2f2f2; }
+.fc-np-item.unread { background: #ebf5ff; }
+.fc-np-item.unread:hover { background: #e1efff; }
+.fc-np-avatar-wrap { width: 52px; height: 52px; position: relative; flex-shrink: 0; }
+.fc-np-avatar {
+  width: 100%; height: 100%; border-radius: 50%;
+  background: #f0f2f5; display: flex; align-items: center; justify-content: center;
+  font-size: 22px;
+}
+.fc-np-badge {
+  position: absolute; bottom: 0; right: 0;
+  width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: #fff; font-weight: 700;
+}
+.fc-np-badge.danger  { background: #f02849; }
+.fc-np-badge.warning { background: #f7b928; color: #000; }
+.fc-np-badge.info    { background: #1877f2; }
+.fc-np-badge.success { background: #45bd62; }
+.fc-np-body { flex: 1; min-width: 0; }
+.fc-np-msg  { font-size: 14px; color: #050505; line-height: 1.35; }
+.fc-np-time { font-size: 12px; color: #65676b; margin-top: 2px; }
+.fc-np-time.unread { color: #0064d1; font-weight: 700; }
+.fc-np-dot  { width: 12px; height: 12px; border-radius: 50%; background: #0064d1; flex-shrink: 0; }
+.fc-np-empty { text-align: center; padding: 36px 20px; color: #888; font-size: 14px; }
+.fc-np-footer { border-top: 1px solid #f0f2f5; }
+.fc-np-see-all {
+  display: block; text-align: center; padding: 12px;
+  font-size: 14px; font-weight: 700; color: #1877f2;
+  cursor: pointer; margin: 0 8px; border-radius: 8px; transition: background .15s;
+}
+.fc-np-see-all:hover { background: #f0f2f5; }
+@keyframes fc-pulse-bell {
+  0%,100% { transform: rotate(0); }
+  20% { transform: rotate(-15deg); }
+  40% { transform: rotate(15deg); }
+  60% { transform: rotate(-10deg); }
+  80% { transform: rotate(10deg); }
+}
+#fc-bell-btn.fc-pulse { animation: fc-pulse-bell .6s ease infinite; }
+</style>
+</head>
+<body>
+
+<!-- ═══ TOP NAV ═══════════════════════════════════ -->
+<nav class="topnav topbar">
+  <a class="tn-brand" href="#">
+    <div class="tn-brand-icon">
+      <svg width="20" height="20" viewBox="0 0 32 32" fill="none">
+        <path d="M6 22 Q16 8 26 22" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <circle cx="16" cy="22" r="3" fill="white"/>
+      </svg>
+    </div>
+    <div class="tn-brand-text">
+      <div class="tn-brand-name">FlotaControl</div>
+      <div class="tn-brand-ver">360° Admin</div>
+    </div>
+  </a>
+
+  <div class="tn-links">
+    <button class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard','Dashboard')">
+      <span class="nav-icon"><i class="fa-solid fa-gauge-high"></i></span>
+      <span class="nav-label">Dashboard</span>
+    </button>
+    <button class="nav-item" id="nav-vehiculos" onclick="showPage('vehiculos','Vehículos')">
+      <span class="nav-icon"><i class="fa-solid fa-bus"></i></span>
+      <span class="nav-label">Vehículos</span>
+    </button>
+    <button class="nav-item" id="nav-ordenes" onclick="showPage('ordenes','Órdenes de trabajo')">
+      <span class="nav-icon"><i class="fa-solid fa-clipboard-list"></i></span>
+      <span class="nav-label">Órdenes</span>
+    </button>
+    <button class="nav-item" id="nav-usuarios" onclick="showPage('usuarios','Usuarios')">
+      <span class="nav-icon"><i class="fa-solid fa-users"></i></span>
+      <span class="nav-label">Usuarios</span>
+    </button>
+    <button class="nav-item" id="nav-asignaciones" onclick="showPage('asignaciones','Asignaciones')">
+      <span class="nav-icon"><i class="fa-solid fa-user-check"></i></span>
+      <span class="nav-label">Asignaciones</span>
+    </button>
+    <button class="nav-item" id="nav-reportes" onclick="showPage('reportes','Reportes')">
+      <span class="nav-icon"><i class="fa-solid fa-chart-line"></i></span>
+      <span class="nav-label">Reportes</span>
+    </button>
+    <button class="nav-item" id="nav-umbrales" onclick="showPage('umbrales','Umbrales de alertas')">
+      <span class="nav-icon"><i class="fa-solid fa-sliders"></i></span>
+      <span class="nav-label">Umbrales</span>
+    </button>
+    <button class="nav-item" id="nav-planes" onclick="showPage('planes','Planes de mantenimiento')">
+      <span class="nav-icon"><i class="fa-solid fa-calendar-check"></i></span>
+      <span class="nav-label">Planes</span>
+    </button>
+    <button class="nav-item" id="nav-galeria" onclick="showPage('galeria','Galería de fotos')">
+      <span class="nav-icon"><i class="fa-solid fa-images"></i></span>
+      <span class="nav-label">Galería</span>
+    </button>
+  </div>
+
+  <div class="tn-right">
+    <!-- Bell alertas -->
+
+
+    <!-- Campana de alertas — fc-bell-btn existe en HTML, JS solo agrega funcionalidad -->
+    <div id="fc-bell-container" style="display:flex;align-items:center;margin-right:4px">
+      <button id="fc-bell-btn" title="Notificaciones" onclick="(function(e){e.stopPropagation();if(typeof FC_ADMIN_PANEL!=='undefined')FC_ADMIN_PANEL.toggle();})(event)">
+        <i class="fa-solid fa-bell"></i><span id="fc-bell-count"></span>
+      </button>
+    </div>
+
+    <!-- Avatar + dropdown -->
+    <div class="topbar-user" id="tn-avatar" onclick="toggleUserDropdown(event)">
+      <div class="topbar-avatar" id="av2">A</div>
+      <div class="topbar-user-info">
+        <span class="topbar-user-name" id="topbar-name">—</span>
+        <span class="rol-badge admin">Administrador</span>
+      </div>
+      <svg class="tn-av-caret" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      <div class="user-dropdown" id="user-dropdown">
+        <div class="ud-header">
+          <div class="ud-avatar" id="av3">A</div>
+          <div>
+            <div class="ud-name" id="ud-name">—</div>
+            <div class="ud-role">Administrador</div>
+          </div>
+        </div>
+        <div class="ud-sep"></div>
+        <button class="ud-item danger" onclick="logout()">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+
+<!-- ═══ MAIN ══════════════════════════════════════ -->
+<main class="main-content" id="main-content">
+
+<!-- ── page title (hidden, used by JS) ─── -->
+<div style="display:none" id="page-title"></div>
+
+<!-- ██  DASHBOARD  ██ -->
+<section id="page-dashboard" class="page active">
+  <div class="page-hdr">
+    <div class="page-hdr-left">
+      <p class="greeting" id="greeting">Buenos días,</p>
+      <h1>Bienvenido, <span id="topbar-name2"></span></h1>
+      <p class="page-sub" id="dash-date"></p>
+    </div>
+    <div class="page-hdr-right">
+      <button class="btn-outline btn-sm" onclick="cargarDashboard()">
+        <svg viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+        Actualizar
+      </button>
+    </div>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="stat-grid">
+    <div class="stat-card green-bar">
+      <div class="stat-icon green"><svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+      <div class="stat-label">Operativos</div>
+      <div class="stat-num" id="cnt-v">—</div>
+      <div class="stat-sub">Vehículos en buen estado</div>
+    </div>
+    <div class="stat-card yellow-bar">
+      <div class="stat-icon yellow"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+      <div class="stat-label">Próximos</div>
+      <div class="stat-num" id="cnt-a">—</div>
+      <div class="stat-sub">Requieren atención pronto</div>
+    </div>
+    <div class="stat-card red-bar">
+      <div class="stat-icon red"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+      <div class="stat-label">Urgentes</div>
+      <div class="stat-num" id="cnt-r">—</div>
+      <div class="stat-sub">Intervención inmediata</div>
+    </div>
+    <div class="stat-card navy-bar">
+      <div class="stat-icon navy"><svg viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v9a2 2 0 01-2 2h-2"/><circle cx="8.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></div>
+      <div class="stat-label">Total flota</div>
+      <div class="stat-num" id="cnt-t">—</div>
+      <div class="stat-sub">Vehículos registrados</div>
+    </div>
+  </div>
+
+  <!-- Insights cards -->
+  <div class="insights-grid">
+    <div class="stat-card blue-bar">
+      <div class="stat-icon blue"><svg viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+      <div class="stat-label">Vehículo más costoso</div>
+      <div class="stat-num ins-num" id="ins-veh">—</div>
+      <div class="stat-sub" id="ins-veh-s">En mantenimiento</div>
+    </div>
+    <div class="stat-card navy-bar">
+      <div class="stat-icon navy"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div>
+      <div class="stat-label">Repuesto más usado</div>
+      <div class="stat-num ins-num" id="ins-rep">—</div>
+      <div class="stat-sub" id="ins-rep-s">Más solicitado</div>
+    </div>
+    <div class="stat-card green-bar">
+      <div class="stat-icon green"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div class="stat-label">Técnico más activo</div>
+      <div class="stat-num ins-num" id="ins-tec">—</div>
+      <div class="stat-sub" id="ins-tec-s">Órdenes completadas</div>
+    </div>
+  </div>
+
+  <!-- Semáforo filter tabs -->
+  <div class="filter-tabs" id="dash-tabs">
+    <button class="ftab dash-ftab" id="dash-ftab-todos"    onclick="filterSem('todos')"><span class="sem-dot all"></span>Todos</button>
+    <button class="ftab dash-ftab" id="dash-ftab-amarillo" onclick="filterSem('amarillo')"><span class="sem-dot amarillo"></span>Próximos</button>
+    <button class="ftab dash-ftab" id="dash-ftab-rojo"     onclick="filterSem('rojo')"><span class="sem-dot rojo"></span>Urgentes</button>
+    <button class="ftab dash-ftab" id="dash-ftab-verde"    onclick="filterSem('verde')"><span class="sem-dot verde"></span>Operativos</button>
+  </div>
+
+  <!-- Fleet table -->
+  <div class="table-card">
+    <div class="table-card-hdr">
+      <span class="table-title">Estado de la flota</span>
+    </div>
+    <div class="table-wrap">
+      <div id="veh-grid">
+        <div class="td-loading">Cargando flota…</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ██  VEHÍCULOS  ██ -->
+<section id="page-vehiculos" class="page">
+  <div class="page-hdr">
+    <div class="page-hdr-left"><h1>Vehículos</h1><p class="page-sub">Gestión completa de la flota</p></div>
+    <div class="page-hdr-right">
+      <button class="btn-outline btn-sm" onclick="exportarExcel('vehiculos')">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>Excel
+      </button>
+      <button class="btn-outline btn-sm" onclick="exportarPDF('vehiculos')">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>PDF
+      </button>
+      <button class="btn-primary" onclick="openModal('m-vehiculo')">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo vehículo
+      </button>
+    </div>
+  </div>
+
+  <div class="top-actions-grid" style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: stretch; margin-bottom: 20px;">
+    <!-- Izquierda: Filtros -->
+    <div>
+      <div class="filters-bar" style="margin-bottom: 8px; height: calc(100% - 24px);">
+        <div class="flt-group wide"><label>Buscar</label>
+          <input type="text" id="fv-q" placeholder="Placa, marca, modelo…" oninput="aplicarFiltrosVeh()"/>
+        </div>
+        <div class="flt-group"><label>Estado semáforo</label>
+          <select id="fv-sem" onchange="aplicarFiltrosVeh()">
+            <option value="">Todos</option>
+            <option value="verde">Operativo</option>
+            <option value="amarillo">Próximo</option>
+            <option value="rojo">Urgente</option>
+          </select>
+        </div>
+        <div style="flex-basis: 100%; height: 0; margin: 0;"></div>
+        <div class="flt-group"><label>Año desde</label>
+          <input type="number" id="fv-anio-min" placeholder="2018" oninput="aplicarFiltrosVeh()"/>
+        </div>
+        <div class="flt-group"><label>Año hasta</label>
+          <input type="number" id="fv-anio-max" placeholder="2025" oninput="aplicarFiltrosVeh()"/>
+        </div>
+        <div class="flt-group"><label>Km mayor a</label>
+          <input type="number" id="fv-km-min" placeholder="50000" oninput="aplicarFiltrosVeh()"/>
+        </div>
+        <div class="flt-btns">
+          <button class="btn-outline btn-sm" onclick="limpiarFiltrosVeh()">Limpiar</button>
+        </div>
+      </div>
+      <div class="filter-summary" id="fv-summary" style="height: 16px;"></div>
+    </div>
+
+    <!-- Derecha: Importar (Carga Masiva) -->
+    <div>
+      <div class="bulk-grid" style="margin-top: 0; height: calc(100% - 24px);">
+        <div class="bulk-compact-layout" style="height: 100%;">
+          <div style="font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-file-excel" style="color:#059669;"></i> Importar vehículos desde Excel
+          </div>
+          <div class="bc-template-row">
+            <span class="bc-label">Descargar plantilla:</span>
+            <button class="btn-outline-green" onclick="descargarPlantillaExcel('vehiculos')">
+              <i class="fa-regular fa-file-excel"></i> Excel
+            </button>
+          </div>
+          <div class="bc-upload-row">
+            <label class="bc-file-input">
+              <i class="fa-regular fa-file-lines"></i>
+              <span id="bc-filename-veh">Seleccionar archivo .xlsx</span>
+              <input type="file" id="fi-bulk-veh" accept=".xlsx" onchange="document.getElementById('bc-filename-veh').innerText = this.files[0] ? this.files[0].name : 'Seleccionar archivo .xlsx'; if(typeof previewBulk === 'function') previewBulk(this,'vehiculos');"/>
+            </label>
+            <button class="btn-solid-green" id="btn-bulk-veh" onclick="subirBulk('vehiculos')" style="display:none;">
+              <i class="fa-solid fa-cloud-arrow-up"></i> Subir
+            </button>
+          </div>
+          <div id="preview-bulk-veh"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-hdr"><span class="table-title">Vehículos</span></div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>Placa</th><th>Marca / Modelo</th><th>Año</th>
+          <th>Km actual</th><th>Estado</th><th>Acciones</th>
+        </tr></thead>
+        <tbody id="tb-veh">
+          <tr><td colspan="6" class="td-loading">Cargando vehículos…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ██  ÓRDENES  ██ -->
+<section id="page-ordenes" class="page">
+  <div class="page-hdr">
+    <div class="page-hdr-left"><h1>Órdenes de trabajo</h1><p class="page-sub">Gestión de mantenimientos y reparaciones</p></div>
+    <div class="page-hdr-right">
+      <button class="btn-outline btn-sm" onclick="exportarExcel('ordenes')">Excel</button>
+      <button class="btn-outline btn-sm" onclick="exportarPDF('ordenes')">PDF</button>
+      <button class="btn-primary" onclick="openModal('m-orden')">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nueva orden
+      </button>
+    </div>
+  </div>
+
+  <div class="filters-bar">
+    <div class="flt-group wide"><label>Buscar</label>
+      <input type="text" id="fo-q" placeholder="#OT, placa, técnico…" oninput="aplicarFiltrosOrd()"/>
+    </div>
+    <div class="flt-group"><label>Estado</label>
+      <select id="fo-estado" onchange="aplicarFiltrosOrd()">
+        <option value="">Todos</option>
+        <option value="Abierta">Abierta</option>
+        <option value="En proceso">En proceso</option>
+        <option value="Cerrada">Cerrada</option>
+        <option value="Cancelada">Cancelada</option>
+      </select>
+    </div>
+    <div class="flt-group"><label>Técnico</label>
+      <select id="fo-tecnico" onchange="aplicarFiltrosOrd()"><option value="">Todos</option></select>
+    </div>
+    <div class="flt-group"><label>Apertura desde</label>
+      <input type="date" id="fo-desde" onchange="aplicarFiltrosOrd()"/>
+    </div>
+    <div class="flt-group"><label>Apertura hasta</label>
+      <input type="date" id="fo-hasta" onchange="aplicarFiltrosOrd()"/>
+    </div>
+    <div class="flt-group"><label>Costo mín ($)</label>
+      <input type="number" id="fo-costo-min" placeholder="0" oninput="aplicarFiltrosOrd()"/>
+    </div>
+    <div class="flt-group"><label>Costo máx ($)</label>
+      <input type="number" id="fo-costo-max" placeholder="999999" oninput="aplicarFiltrosOrd()"/>
+    </div>
+  </div>
+  <div class="filter-summary" id="fo-summary"></div>
+
+  <div class="table-card">
+    <div class="table-card-hdr"><span class="table-title">Órdenes</span></div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>#OT</th><th>Vehículo</th><th>Técnico</th><th>Apertura</th>
+          <th>Estado</th><th>Costo</th><th>Acciones</th>
+        </tr></thead>
+        <tbody id="tb-ord">
+          <tr><td colspan="7" class="td-loading">Cargando órdenes…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ██  USUARIOS  ██ -->
+<section id="page-usuarios" class="page">
+  <div class="page-hdr">
+    <div class="page-hdr-left"><h1>Usuarios</h1><p class="page-sub">Gestión de accesos y roles</p></div>
+    <div class="page-hdr-right">
+      <button class="btn-primary" onclick="openModal('m-usuario')">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo usuario
+      </button>
+    </div>
+  </div>
+
+  <div class="top-actions-grid" style="display: flex; flex-direction: column; gap: 20px; margin-bottom: 20px;">
+    <!-- Arriba: Filtros -->
+    <div>
+      <div class="filters-bar" style="margin-bottom: 8px;">
+        <div class="flt-group wide"><label>Buscar</label>
+          <input type="text" id="fu-q" placeholder="Nombre, correo…" oninput="aplicarFiltrosUsr()"/>
+        </div>
+        <div class="flt-group"><label>Rol</label>
+          <select id="fu-rol" onchange="aplicarFiltrosUsr()">
+            <option value="">Todos los roles</option>
+            <option value="Administrador">Administrador</option>
+            <option value="Tecnico">Técnico</option>
+            <option value="Conductor">Conductor</option>
+          </select>
+        </div>
+        <div class="flt-group"><label>Estado</label>
+          <select id="fu-activo" onchange="aplicarFiltrosUsr()">
+            <option value="">Todos</option>
+            <option value="1">Activos</option>
+            <option value="0">Inactivos</option>
+          </select>
+        </div>
+      </div>
+      <div class="filter-summary" id="fu-summary"></div>
+    </div>
+
+    <!-- Abajo: Importar (Carga Masiva) -->
+    <div>
+      <div class="collapsible-section" id="bulk-usr-section" style="border-color: #bbf7d0;">
+        <div class="collapsible-header" onclick="toggleCollapsible('bulk-usr-body')" style="background-color: #f0fdf4; color: #166534; border-bottom: 1px solid #bbf7d0;">
+          <span><i class="fa-solid fa-arrow-up-from-bracket"></i> Carga masiva de usuarios</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" style="stroke: #166534;"><polyline points="6 15 12 9 18 15"/></svg>
+        </div>
+        <div class="collapsible-body" id="bulk-usr-body" style="display: block;">
+          <div style="padding: 4px 0 16px 0;">
+            <div style="border: 1px dashed #cbd5e1; padding: 14px; border-radius: 6px; margin-bottom: 16px; font-size: 13px; color: #64748b;">
+              <p style="margin: 0 0 8px 0;">Columnas requeridas (primera fila = encabezado exacto):</p>
+              <div style="background: #f1f5f9; padding: 8px 12px; border-radius: 4px; font-family: monospace; color: #475569; margin-bottom: 10px;">
+                nombre, correo, rol, contraseña
+              </div>
+              <p style="margin: 0; color: #059669; font-weight: 600;">rol acepta: Administrador · Tecnico · Conductor. Acepta Excel (.xlsx).</p>
+            </div>
+            
+            <div class="bc-template-row" style="margin-bottom: 12px;">
+              <span class="bc-label">Descargar plantilla:</span>
+              <button class="btn-outline-green" onclick="descargarPlantillaExcel('usuarios')">
+                <i class="fa-regular fa-file-excel"></i> Excel
+              </button>
+            </div>
+            <div class="bc-upload-row">
+              <label class="bc-file-input">
+                <i class="fa-regular fa-file-lines"></i>
+                <span id="bc-filename-usr">Seleccionar archivo .xlsx</span>
+                <input type="file" id="fi-bulk-usr" accept=".xlsx" onchange="document.getElementById('bc-filename-usr').innerText = this.files[0] ? this.files[0].name : 'Seleccionar archivo .xlsx'; if(typeof previewBulk === 'function') previewBulk(this,'usuarios');"/>
+              </label>
+              <button class="btn-solid-green" id="btn-bulk-usr" onclick="subirBulk('usuarios')" style="display:none;">
+                <i class="fa-solid fa-cloud-arrow-up"></i> Subir usuarios
+              </button>
+            </div>
+            <div id="preview-bulk-usr"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-hdr"><span class="table-title">Usuarios</span></div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>Nombre</th><th>Correo</th><th>Rol</th><th>Estado</th><th>Acciones</th>
+        </tr></thead>
+        <tbody id="tb-usr">
+          <tr><td colspan="5" class="td-loading">Cargando usuarios…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ██  ASIGNACIONES  ██ -->
+<section id="page-asignaciones" class="page">
+  <div class="page-hdr">
+    <div class="page-hdr-left"><h1>Asignaciones</h1><p class="page-sub">Conductores y vehículos asignados</p></div>
+    <div class="page-hdr-right">
+      <button class="btn-primary" onclick="openModal('m-asignacion')">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nueva asignación
+      </button>
+    </div>
+  </div>
+
+  <div class="filters-bar">
+    <div class="flt-group wide"><label>Buscar</label>
+      <input type="text" id="fa-asig-q" placeholder="Conductor, placa…" oninput="filtrarAsignaciones()"/>
+    </div>
+    <div class="flt-group"><label>Turno</label>
+      <select id="fa-turno" onchange="filtrarAsignaciones()">
+        <option value="">Todos</option>
+        <option value="manana">Mañana</option>
+        <option value="tarde">Tarde</option>
+        <option value="noche">Noche</option>
+        <option value="completo">Completo</option>
+      </select>
+    </div>
+    <div class="flt-group"><label>Estado</label>
+      <select id="fa-asig-estado" onchange="filtrarAsignaciones()">
+        <option value="">Todos</option>
+        <option value="1">Activas</option>
+        <option value="0">Inactivas</option>
+      </select>
+    </div>
+    <div class="flt-group"><label>Fecha desde</label>
+      <input type="date" id="fa-asig-desde" onchange="filtrarAsignaciones()"/>
+    </div>
+    <div class="flt-group"><label>Fecha hasta</label>
+      <input type="date" id="fa-asig-hasta" onchange="filtrarAsignaciones()"/>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-hdr"><span class="table-title">Asignaciones</span></div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>Conductor</th><th>Vehículo</th><th>Turno</th>
+          <th>Fecha inicio</th><th>Fecha fin</th><th>Estado</th><th>Acciones</th>
+        </tr></thead>
+        <tbody id="tb-asig">
+          <tr><td colspan="7" class="td-loading">Cargando asignaciones…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+
+
+<!-- ██  REPORTES  ██ -->
+<section id="page-reportes" class="page">
+  <div class="page-hdr">
+    <div class="page-hdr-left"><h1>Reportes</h1><p class="page-sub">Análisis de costos y órdenes de trabajo</p></div>
+    <div class="page-hdr-right">
+      <button class="btn-outline btn-sm" onclick="exportarPDF('reportes')">PDF</button>
+      <button class="btn-green" onclick="cargarReporte()">
+        <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Generar reporte
+      </button>
+    </div>
+  </div>
+
+  <!-- Periodos rápidos -->
+  <div class="filter-tabs mb16" id="rep-periodo-rapido">
+    <button class="ftab" onclick="setPeriodoReporte('hoy',this)">Hoy</button>
+    <button class="ftab" onclick="setPeriodoReporte('semana',this)">Esta semana</button>
+    <button class="ftab active" onclick="setPeriodoReporte('mes',this)">Este mes</button>
+    <button class="ftab" onclick="setPeriodoReporte('anio',this)">Este año</button>
+  </div>
+
+  <div class="filters-bar">
+    <div class="flt-group"><label>Vehículo</label>
+      <select id="rep-vehiculo" onchange="cargarReporte()"><option value="">Todos</option></select>
+    </div>
+    <div class="flt-group"><label>Técnico</label>
+      <select id="rep-tecnico" onchange="cargarReporte()"><option value="">Todos</option></select>
+    </div>
+    <div class="flt-group"><label>Estado orden</label>
+      <select id="fo-estado-rep" onchange="cargarReporte()">
+        <option value="">Todos</option>
+        <option value="Cerrada">Cerrada</option>
+        <option value="Abierta">Abierta</option>
+      </select>
+    </div>
+    <div class="flt-group"><label>Fecha desde</label>
+      <input type="date" id="rep-desde"/>
+    </div>
+    <div class="flt-group"><label>Fecha hasta</label>
+      <input type="date" id="rep-hasta"/>
+    </div>
+  </div>
+
+  <!-- Métricas reporte -->
+  <div class="metricas-row" id="metricas-row" style="display:none">
+    <div class="metrica-card"><div class="metrica-label">Total costos</div><div class="metrica-val" id="met-total">—</div></div>
+    <div class="metrica-card"><div class="metrica-label">Costo promedio</div><div class="metrica-val" id="met-prom">—</div></div>
+    <div class="metrica-card"><div class="metrica-label">Intervenciones</div><div class="metrica-val" id="met-num">—</div></div>
+  </div>
+
+  <!-- Sub-filtros reporte -->
+  <div id="rep-sub-filtros" style="display:none" class="filters-bar">
+    <div class="flt-group wide"><label>Buscar en resultados</label>
+      <input type="text" id="rep-q" placeholder="Placa, técnico…" oninput="filtrarResultadosReporte()"/>
+    </div>
+    <div class="flt-group"><label>Ordenar</label>
+      <select id="rep-ord-col" onchange="ordenarResultadosReporte()">
+        <option value="">Sin ordenar</option>
+        <option value="fecha_desc">Fecha ↓</option>
+        <option value="fecha_asc">Fecha ↑</option>
+        <option value="costo_desc">Costo ↓</option>
+        <option value="costo_asc">Costo ↑</option>
+      </select>
+    </div>
+  </div>
+  <div class="filter-summary" id="rep-summary"></div>
+
+  <div class="table-card">
+    <div class="table-card-hdr"><span class="table-title">Resultados</span></div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>#OT</th><th>Vehículo</th><th>Técnico</th>
+          <th>Apertura</th><th>M. Obra</th><th>Repuestos</th><th>Total</th>
+        </tr></thead>
+        <tbody id="tb-rep">
+          <tr><td colspan="7" class="td-loading">Genera un reporte para ver resultados</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Ranking -->
+  <div class="section-sep mt24"><div class="sep-line"></div><span class="sep-label">Ranking de vehículos</span><div class="sep-line"></div></div>
+  <div class="filters-bar">
+    <div class="flt-group wide"><label>Buscar</label>
+      <input type="text" id="fr-q" placeholder="Placa, marca…" oninput="filtrarRankingLocal()"/>
+    </div>
+    <div class="flt-group"><label>Color riesgo</label>
+      <select id="fr-color" onchange="filtrarRankingLocal()">
+        <option value="">Todos</option>
+        <option value="rojo">Rojo</option>
+        <option value="amarillo">Amarillo</option>
+        <option value="verde">Verde</option>
+      </select>
+    </div>
+    <div class="flt-group"><label>Mín. intervenciones</label>
+      <input type="number" id="fr-min-int" placeholder="0" oninput="filtrarRankingLocal()"/>
+    </div>
+    <div class="flt-group"><label>Mín. costo ($)</label>
+      <input type="number" id="fr-min-costo" placeholder="0" oninput="filtrarRankingLocal()"/>
+    </div>
+    <div class="flt-group"><label>Ordenar por</label>
+      <select id="fr-orden" onchange="filtrarRankingLocal()">
+        <option value="costo_desc">Mayor costo</option>
+        <option value="int_desc">Más intervenciones</option>
+      </select>
+    </div>
+    <div class="flt-group"><label>Periodo</label>
+      <select id="ranking-periodo" onchange="cargarRanking()">
+        <option value="mes">Este mes</option>
+        <option value="anio">Este año</option>
+        <option value="todo">Todo</option>
+      </select>
+    </div>
+  </div>
+  <div class="filter-summary" id="fr-summary"></div>
+  <div class="table-card">
+    <div class="table-card-hdr"><span class="table-title">Ranking por costo</span></div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>#</th><th>Vehículo</th><th>Intervenciones</th>
+          <th>Costo total</th><th>Riesgo</th>
+        </tr></thead>
+        <tbody id="tb-rank">
+          <tr><td colspan="6" class="td-loading">Cargando ranking…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ██  UMBRALES  ██ -->
+<section id="page-umbrales" class="page">
+  <div class="page-hdr">
+    <div class="page-hdr-left"><h1>Umbrales de alertas</h1><p class="page-sub">Configura los parámetros de alerta del sistema</p></div>
+  </div>
+
+  <div class="grid-2" style="align-items:start">
+    <div>
+      <div class="form-card mb16">
+        <div class="form-card-title">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/></svg>
+          Umbral de kilómetros
+        </div>
+        <div class="field-group">
+          <label>Kilómetros actuales: <strong id="umb-km-actual">500 km</strong></label>
+          <input type="number" id="umb-km" min="100" max="50000" value="500" placeholder="500"/>
+          <div class="field-hint">Alerta cuando falten este número de km para el próximo mantenimiento.</div>
+        </div>
+        <div class="flex gap8">
+          <button class="btn-primary" onclick="guardarUmbrales()">Guardar cambios</button>
+          <button class="btn-outline" onclick="restablecerUmbrales()">Restablecer</button>
+        </div>
+      </div>
+      <div class="form-card">
+        <div class="form-card-title">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Umbral de días
+        </div>
+        <div class="field-group">
+          <label>Días actuales: <strong id="umb-dias-actual">7 días</strong></label>
+          <input type="number" id="umb-dias" min="1" max="365" value="7" placeholder="7"/>
+          <div class="field-hint">Alerta cuando falten este número de días para el próximo mantenimiento.</div>
+        </div>
+        <div class="flex gap8">
+          <button class="btn-primary" onclick="guardarUmbrales()">Guardar cambios</button>
+          <button class="btn-outline" onclick="restablecerUmbrales()">Restablecer</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Evaluación manual de alertas
+      </div>
+      <p class="text-lt text-sm mb16">Selecciona un vehículo para evaluar y generar alertas manualmente.</p>
+      <div class="field-group">
+        <label>Vehículo a evaluar</label>
+        <select id="umb-evaluar-veh"><option value="">— Seleccione un vehículo —</option></select>
+      </div>
+      <button class="btn-blue full-width" onclick="evaluarVehiculo()">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        Evaluar y generar alertas
+      </button>
+      <div id="umb-evaluar-res" class="mt16"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ██  PLANES  ██ -->
+<section id="page-planes" class="page">
+  <div class="page-hdr">
+    <div class="page-hdr-left"><h1>Planes de mantenimiento</h1><p class="page-sub">Programación preventiva por vehículo</p></div>
+    <div class="page-hdr-right">
+      <button class="btn-primary" onclick="openModal('m-plan')">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo plan
+      </button>
+    </div>
+  </div>
+
+  <div class="filters-bar">
+    <div class="flt-group wide"><label>Buscar</label>
+      <input type="text" id="planes-buscar" placeholder="Vehículo, nombre del plan…" oninput="filtrarPlanes()"/>
+    </div>
+    <div class="flt-group"><label>Vehículo</label>
+      <select id="planes-veh-sel" onchange="cargarPlanes()"><option value="">Todos</option></select>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-card-hdr"><span class="table-title">Planes</span></div>
+    <div class="table-wrap">
+      <table class="data-table">
+        <thead><tr>
+          <th>Vehículo</th><th>Plan</th><th>Ciclo</th>
+          <th>Intervalo km</th><th>Intervalo días</th>
+          <th>Próx. km</th><th>Próx. fecha</th><th>Estado</th><th>Acciones</th>
+        </tr></thead>
+        <tbody id="tb-planes">
+          <tr><td colspan="9" class="td-loading">Cargando planes…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ██  GALERÍA  ██ -->
+<section id="page-galeria" class="page">
+  <div class="gal-hero">
+    <div class="gal-particles" id="gal-particles"></div>
+    <div class="gal-hero-content">
+      <h1 class="gal-hero-title">Galería de Vehículos</h1>
+      <p class="gal-hero-sub">Registro fotográfico · Antes y después de reparaciones</p>
+    </div>
+    <div class="gal-hero-filters">
+      <div class="gal-filter-group">
+        <label>Desde</label>
+        <input type="date" id="gal-desde" class="gal-date-input" onchange="checkAutoFilterGaleria()"/>
+      </div>
+      <div class="gal-filter-group">
+        <label>Hasta</label>
+        <input type="date" id="gal-hasta" class="gal-date-input" onchange="checkAutoFilterGaleria()"/>
+      </div>
+      <button class="btn-gal-clear" style="padding: 8px 16px; border-radius: var(--r8); background: transparent; color: rgba(255,255,255,.6); border: 1.5px solid transparent; font-family: var(--font); font-size: 13px; font-weight: 600; cursor: pointer; height: 38px; transition: all .2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.6)'" onclick="limpiarFiltrosGaleria()">Limpiar</button>
+      <div class="gal-search-wrap">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="gal-search" placeholder="Buscar placa…" class="gal-search-input" oninput="filtrarGaleria()"/>
+      </div>
+    </div>
+  </div>
+  <div class="gal-counter" id="gal-counter"></div>
+  <div class="galeria-vehiculos" id="galeria-vehiculos">
+    <div class="td-loading">Cargando galería…</div>
+  </div>
+</section>
+
+</main>
+
+<!-- ═══ MODALES ══════════════════════════════════ -->
+
+<!-- Modal vehículo -->
+<div class="modal-overlay" id="m-vehiculo" onclick="closeModalOutside(event,'m-vehiculo')">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3 class="modal-title">Nuevo vehículo</h3>
+      <button class="modal-close" onclick="closeModal('m-vehiculo')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="f-vehiculo">
+        <div class="grid-2">
+          <div class="field-group"><label>Placa *</label><input name="placa" placeholder="ABC123" required/></div>
+          <div class="field-group"><label>Marca *</label><input name="marca" placeholder="Chevrolet" required/></div>
+          <div class="field-group"><label>Modelo *</label><input name="modelo" placeholder="NHR" required/></div>
+          <div class="field-group"><label>Año *</label><input name="anio" type="number" placeholder="2022" required/></div>
+          <div class="field-group"><label>Km actual *</label><input name="kmActual" type="number" placeholder="0" required/></div>
+          <div class="field-group"><label>Capacidad pasajeros</label><input name="capacidad" type="number" placeholder="12"/></div>
+          <div class="field-group"><label>N° Motor</label><input name="numMotor" placeholder="XXX-12345"/></div>
+          <div class="field-group"><label>N° Chasis</label><input name="numChasis" placeholder="YYY-67890"/></div>
+          <div class="field-group"><label>Vencimiento SOAT *</label><input name="venceSoat" type="date" required/></div>
+          <div class="field-group"><label>Vencimiento Tecnomecánica *</label><input name="venceTecnomecanica" type="date" required/></div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn-primary">Guardar vehículo</button>
+          <button type="button" class="btn-outline" onclick="closeModal('m-vehiculo')">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal orden -->
+<div class="modal-overlay" id="m-orden" onclick="closeModalOutside(event,'m-orden')">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3 class="modal-title">Nueva orden de trabajo</h3>
+      <button class="modal-close" onclick="closeModal('m-orden')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="f-orden">
+        <div class="field-group"><label>Vehículo *</label>
+          <select id="ord-veh" name="vehiculoId" required><option value="">— Seleccione —</option></select>
+        </div>
+        <div class="field-group"><label>Técnico</label>
+          <select id="ord-tec" name="tecnicoId"><option value="">Sin asignar</option></select>
+        </div>
+        <div class="field-group"><label>Descripción</label>
+          <textarea name="descripcion" rows="3" placeholder="Detalle el trabajo a realizar…"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn-primary">Crear orden</button>
+          <button type="button" class="btn-outline" onclick="closeModal('m-orden')">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal usuario -->
+<div class="modal-overlay" id="m-usuario" onclick="closeModalOutside(event,'m-usuario')">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3 class="modal-title">Nuevo usuario</h3>
+      <button class="modal-close" onclick="closeModal('m-usuario')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="f-usuario">
+        <div class="field-group"><label>Nombre *</label><input name="nombre" placeholder="Nombre completo" required/></div>
+        <div class="field-group"><label>Correo *</label><input name="correo" type="email" placeholder="usuario@empresa.com" required/></div>
+        <div class="field-group"><label>Contraseña *</label><input name="contrasena" type="password" placeholder="Mínimo 8 caracteres" required/></div>
+        <div class="field-group"><label>Rol *</label>
+          <select name="rol" required>
+            <option value="">— Seleccione —</option>
+            <option value="Administrador">Administrador</option>
+            <option value="Tecnico">Técnico</option>
+            <option value="Conductor">Conductor</option>
+          </select>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn-primary">Crear usuario</button>
+          <button type="button" class="btn-outline" onclick="closeModal('m-usuario')">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal asignación -->
+<div class="modal-overlay" id="m-asignacion" onclick="closeModalOutside(event,'m-asignacion')">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3 class="modal-title">Nueva asignación</h3>
+      <button class="modal-close" onclick="closeModal('m-asignacion')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="f-asignacion">
+        <div class="field-group"><label>Vehículo *</label>
+          <select id="asig-veh" name="vehiculoId" required><option value="">— Seleccione —</option></select>
+        </div>
+        <div class="field-group"><label>Conductor *</label>
+          <select id="asig-con" name="conductorId" required><option value="">— Seleccione —</option></select>
+        </div>
+        <div class="field-group"><label>Turno *</label>
+          <select name="turno" required>
+            <option value="completo">Completo</option>
+            <option value="manana">Mañana</option>
+            <option value="tarde">Tarde</option>
+            <option value="noche">Noche</option>
+          </select>
+        </div>
+        <div class="grid-2">
+          <div class="field-group"><label>Fecha inicio *</label><input name="fechaInicio" type="date" required/></div>
+          <div class="field-group"><label>Fecha fin</label><input name="fechaFin" type="date"/></div>
+        </div>
+        <div class="field-group"><label>Observaciones</label>
+          <textarea name="observaciones" rows="2" placeholder="Opcional…"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn-primary">Crear asignación</button>
+          <button type="button" class="btn-outline" onclick="closeModal('m-asignacion')">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal plan -->
+<div class="modal-overlay" id="m-plan" onsubmit="crearPlan(event)" onclick="closeModalOutside(event,'m-plan')">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3 class="modal-title">Nuevo plan de mantenimiento</h3>
+      <button class="modal-close" onclick="closeModal('m-plan')">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="f-plan">
+        <div class="field-group"><label>Vehículo *</label>
+          <select id="plan-veh-sel" name="vehiculoId" required><option value="">— Seleccione —</option></select>
+        </div>
+        <div class="field-group"><label>Nombre del plan *</label>
+          <input name="nombre" placeholder="Ej: Cambio de aceite" required/>
+        </div>
+        <div class="field-group"><label>Tipo de ciclo *</label>
+          <select id="plan-tipo" name="tipoCiclo" onchange="actualizarCamposPlan()" required>
+            <option value="km">Por km</option>
+            <option value="dias">Por días</option>
+            <option value="combinado">Combinado</option>
+          </select>
+        </div>
+        <div id="campo-km" class="field-group">
+          <label>Intervalo km *</label>
+          <input name="intervaloKm" type="number" placeholder="5000" id="plan-km-input"/>
+        </div>
+        <div id="campo-dias" class="field-group" style="display:none">
+          <label>Intervalo días *</label>
+          <input name="intervaloDias" type="number" placeholder="90" id="plan-dias-input"/>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn-primary">Crear plan</button>
+          <button type="button" class="btn-outline" onclick="closeModal('m-plan')">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal detalle vehículo -->
+<div class="modal-overlay" id="m-det-veh" onclick="closeModalOutside(event,'m-det-veh')">
+  <div class="modal-box modal-lg">
+    <div class="modal-hdr">
+      <h3 class="modal-title" id="mdv-title">Detalle vehículo</h3>
+      <button class="modal-close" onclick="closeModal('m-det-veh')">✕</button>
+    </div>
+    <div class="modal-body" id="mdv-body">
+      <div class="td-loading">Cargando…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal detalle orden -->
+<div class="modal-overlay" id="m-det-ord" onclick="closeModalOutside(event,'m-det-ord')">
+  <div class="modal-box modal-lg">
+    <div class="modal-hdr">
+      <h3 class="modal-title" id="mdo-title">Detalle orden</h3>
+      <button class="modal-close" onclick="closeModal('m-det-ord')">✕</button>
+    </div>
+    <div class="modal-body" id="mdo-body">
+      <div class="td-loading">Cargando…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal documentos -->
+<div class="modal-overlay" id="m-docs-veh" onclick="closeModalOutside(event,'m-docs-veh')">
+  <div class="modal-box modal-lg">
+    <div class="modal-hdr">
+      <h3 class="modal-title">Gestión de documentos</h3>
+      <button class="modal-close" onclick="closeModal('modal-docs')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="mdoc-veh-info" class="mb16"></div>
+      <div class="grid-2 mb16">
+        <div class="field-group"><label>Tipo de documento</label>
+          <select id="mdoc-tipo">
+            <option value="soat">SOAT</option>
+            <option value="tecnomecanica">Tecnomecánica</option>
+            <option value="tarjeta_operacion">Tarjeta de operación</option>
+            <option value="licencia_transito">Licencia de tránsito</option>
+            <option value="poliza">Póliza</option>
+          </select>
+        </div>
+        <div class="field-group"><label>Fecha de vencimiento</label>
+          <input type="date" id="mdoc-fecha"/>
+        </div>
+      </div>
+      <div id="mdoc-lista"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal kilometraje -->
+<div class="modal-overlay" id="m-kilometraje" onclick="closeModalOutside(event,'m-kilometraje')">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <h3 class="modal-title" id="mkm-title">Kilometraje</h3>
+      <button class="modal-close" onclick="closeModal('modal-km')">✕</button>
+    </div>
+    <div class="modal-body" id="mkm-body">
+      <div class="td-loading">Cargando…</div>
+    </div>
+  
+  </div>
+</div>
+
+<!-- Modal galería fotos -->
+<div class="modal-overlay" id="m-galeria" onclick="closeModalOutside(event,'m-galeria')">
+  <div class="modal-box modal-lg">
+    <div class="modal-hdr">
+      <h3 class="modal-title" id="mgal-title">Galería de la orden</h3>
+      <button class="modal-close" onclick="closeModal('modal-gal')">✕</button>
+    </div>
+    <div class="modal-body" id="mgal-body">
+      <div class="td-loading">Cargando fotos…</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Modal Galería Vehículo (antes/después premium) -->
+<div class="modal-overlay modal-fullscreen" id="m-galeria-veh" onclick="closeModalOutside(event,'m-galeria-veh')">
+  <div class="modal-box modal-gal-premium">
+    <div class="modal-hdr modal-gal-hdr">
+      <div>
+        <div class="modal-gal-eyebrow">Galería de reparaciones</div>
+        <h3 class="modal-title" id="mgalv-title">Vehículo</h3>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center">
+        <div class="mgalv-filters">
+          <input type="date" id="mgalv-desde" placeholder="Desde" class="gal-date-input" onchange="checkAutoFilterModalGaleria()"/>
+          <input type="date" id="mgalv-hasta" placeholder="Hasta" class="gal-date-input" onchange="checkAutoFilterModalGaleria()"/>
+        </div>
+        <button class="modal-close" onclick="closeModal('m-galeria-veh')">✕</button>
+      </div>
+    </div>
+    <div class="modal-body" id="mgalv-body" style="padding:28px">
+      <div class="td-loading">Cargando…</div>
+    </div>
+  </div>
+</div>
+<!-- Panel alertas campana — FC_ADMIN_PANEL.render() llena este div -->
+<div id="fc-notif-panel"></div>
+
+<!-- Drawer edición -->
+<div id="fc-drawer-overlay" onclick="cerrarDrawer()"></div>
+<div id="fc-drawer">
+  <div id="fc-drawer-header">
+    <span id="fc-drawer-title">Editar</span>
+    <button id="fc-drawer-close" onclick="cerrarDrawer()">✕</button>
+  </div>
+  <div id="fc-drawer-body"></div>
+  <div id="fc-drawer-footer">
+    <button class="btn-primary" id="fc-drawer-save">Guardar cambios</button>
+    <button class="btn-outline" onclick="cerrarDrawer()">Cancelar</button>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/notificacion.js"></script>
+<script src="../assets/js/app.js"></script>
+<script src="../assets/js/carga-masiva.js"></script>
+</body>
+</html>
