@@ -12,10 +12,11 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.KilometrajeController = void 0;
+exports.ConductorKilometrajeController = exports.KilometrajeController = void 0;
 const common_1 = require("@nestjs/common");
 const kilometraje_service_1 = require("./kilometraje.service");
 const create_registro_km_dto_1 = require("./dto/create-registro-km.dto");
+const cerrar_pendiente_dto_1 = require("./dto/cerrar-pendiente.dto");
 const jwt_auth_guard_1 = require("../auth/jwt-auth.guard");
 const roles_guard_1 = require("../auth/roles.guard");
 const roles_decorator_1 = require("../auth/roles.decorator");
@@ -79,4 +80,55 @@ exports.KilometrajeController = KilometrajeController = __decorate([
     (0, common_1.Controller)('vehiculos/:vehiculoId/kilometraje'),
     __metadata("design:paramtypes", [kilometraje_service_1.KilometrajeService])
 ], KilometrajeController);
+let ConductorKilometrajeController = class ConductorKilometrajeController {
+    service;
+    constructor(service) {
+        this.service = service;
+    }
+    historialConductor(conductorId) {
+        return this.service.historialConductor(conductorId);
+    }
+    turnosPendientes(conductorId) {
+        return this.service.turnosPendientes(conductorId);
+    }
+    cerrarPendiente(conductorId, registroInicioId, dto, req) {
+        if (req.user.rol === usuario_entity_1.RolUsuario.CONDUCTOR && req.user.id !== conductorId) {
+            throw new common_1.ForbiddenException('Solo puedes cerrar tus propios turnos');
+        }
+        return this.service.cerrarTurnoPendiente(conductorId, registroInicioId, dto);
+    }
+};
+exports.ConductorKilometrajeController = ConductorKilometrajeController;
+__decorate([
+    (0, roles_decorator_1.Roles)(usuario_entity_1.RolUsuario.ADMINISTRADOR, usuario_entity_1.RolUsuario.TECNICO, usuario_entity_1.RolUsuario.CONDUCTOR),
+    (0, common_1.Get)(),
+    __param(0, (0, common_1.Param)('conductorId', common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", void 0)
+], ConductorKilometrajeController.prototype, "historialConductor", null);
+__decorate([
+    (0, roles_decorator_1.Roles)(usuario_entity_1.RolUsuario.CONDUCTOR, usuario_entity_1.RolUsuario.ADMINISTRADOR),
+    (0, common_1.Get)('pendientes'),
+    __param(0, (0, common_1.Param)('conductorId', common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", void 0)
+], ConductorKilometrajeController.prototype, "turnosPendientes", null);
+__decorate([
+    (0, roles_decorator_1.Roles)(usuario_entity_1.RolUsuario.CONDUCTOR, usuario_entity_1.RolUsuario.ADMINISTRADOR),
+    (0, common_1.Post)('pendientes/:registroInicioId/cerrar'),
+    __param(0, (0, common_1.Param)('conductorId', common_1.ParseIntPipe)),
+    __param(1, (0, common_1.Param)('registroInicioId', common_1.ParseIntPipe)),
+    __param(2, (0, common_1.Body)()),
+    __param(3, (0, common_1.Request)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Number, cerrar_pendiente_dto_1.CerrarPendienteDto, Object]),
+    __metadata("design:returntype", void 0)
+], ConductorKilometrajeController.prototype, "cerrarPendiente", null);
+exports.ConductorKilometrajeController = ConductorKilometrajeController = __decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, roles_guard_1.RolesGuard),
+    (0, common_1.Controller)('conductores/:conductorId/kilometraje'),
+    __metadata("design:paramtypes", [kilometraje_service_1.KilometrajeService])
+], ConductorKilometrajeController);
 //# sourceMappingURL=kilometraje.controller.js.map

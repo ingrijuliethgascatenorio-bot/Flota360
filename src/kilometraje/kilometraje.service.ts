@@ -1,8 +1,13 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RegistroKm, MomentoKm } from './registro-km.entity';
 import { CreateRegistroKmDto } from './dto/create-registro-km.dto';
+import { CerrarPendienteDto } from './dto/cerrar-pendiente.dto';
 import { VehiculosService } from '../vehiculos/vehiculos.service';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { PlanesService } from '../planes/planes.service';
@@ -89,7 +94,7 @@ export class KilometrajeService {
 
     // RF-INN-01 — calcular km/día y actualizar predicción centralizada
     const resPred = await this.prediccionService.calcularPrediccion(vehiculoId);
-    
+
     // Actualizar también los planes individuales (Sistema A)
     await this.planesService.recalcularPrediccion(vehiculoId, resPred.kmPorDia);
 
@@ -101,19 +106,19 @@ export class KilometrajeService {
     return registro;
   }
 
-  /**
-   * Busca y finaliza la asignación activa del conductor para el vehículo dado hoy.
-   */
-  private async finalizarAsignacionActiva(vehiculoId: number, conductorId: number) {
+  private async finalizarAsignacionActiva(
+    vehiculoId: number,
+    conductorId: number,
+  ) {
     const hoy = new Date().toISOString().split('T')[0];
-    const asignacion = await this.asignRepo.findOne({
-      where: {
-        vehiculo: { id: vehiculoId },
-        conductor: { id: conductorId },
-        fechaInicio: hoy,
-        activo: true
-      }
-    });
+    const asignacion = await this.asignRepo
+      .createQueryBuilder('a')
+      .where('a.vehiculo_id = :vehiculoId', { vehiculoId })
+      .andWhere('a.conductor_id = :conductorId', { conductorId })
+      .andWhere('a.activo = true')
+      .andWhere('a.fecha_inicio <= :hoy', { hoy })
+      .andWhere('(a.fecha_fin >= :hoy OR a.fecha_fin IS NULL)', { hoy })
+      .getOne();
 
     if (asignacion) {
       asignacion.activo = false;
@@ -127,6 +132,14 @@ export class KilometrajeService {
       where: { vehiculo: { id: vehiculoId } },
       order: { registradoEn: 'DESC' },
       take: 50,
+    });
+  }
+
+  async historialConductor(conductorId: number): Promise<RegistroKm[]> {
+    return this.repo.find({
+      where: { conductor: { id: conductorId } },
+      relations: ['vehiculo'],
+      order: { registradoEn: 'DESC' },
     });
   }
 
@@ -219,6 +232,105 @@ export class KilometrajeService {
       turno,
       mensaje: `Km encadenado desde el FIN del turno ${anterior}: ${registroFin.kmValor} km.`,
     };
+  }
+
+  // ── Turnos pendientes: inicios sin fin correspondiente ───────────────────
+  async turnosPendientes(conductorId: number): Promise<any[]> {
+    return this.repo
+      .createQueryBuilder('r_ini')
+      .leftJoinAndSelect('r_ini.vehiculo', 'v')
+      .leftJoin(
+        RegistroKm,
+        'r_fin',
+        `r_fin.vehiculo_id = r_ini.vehiculo_id
+         AND r_fin.conductor_id = r_ini.conductor_id
+         AND r_fin.momento = 'fin'
+         AND DATE(r_fin.registrado_en AT TIME ZONE 'America/Bogota') = DATE(r_ini.registrado_en AT TIME ZONE 'America/Bogota')`,
+      )
+      .where('r_ini.conductor_id = :cid', { cid: conductorId })
+      .andWhere('r_ini.momento = :m', { m: MomentoKm.INICIO })
+      .andWhere('r_fin.id IS NULL')
+      .orderBy('r_ini.registrado_en', 'DESC')
+      .select([
+        'r_ini.id            AS "registroInicioId"',
+        'r_ini.km_valor      AS "kmInicio"',
+        'r_ini.registrado_en AS "fecha"',
+        'v.id                AS "vehiculoId"',
+        'v.placa             AS "placa"',
+        'v.marca             AS "marca"',
+      ])
+      .getRawMany();
+  }
+
+  // ── Cerrar turno pendiente (bypass validación de fecha de asignación) ─────
+  async cerrarTurnoPendiente(
+    conductorId: number,
+    registroInicioId: number,
+    dto: CerrarPendienteDto,
+  ): Promise<RegistroKm> {
+    // 1. Verificar que el inicio existe y pertenece a este conductor
+    const regInicio = await this.repo.findOne({
+      where: {
+        id: registroInicioId,
+        conductor: { id: conductorId },
+        momento: MomentoKm.INICIO,
+      },
+      relations: ['vehiculo'],
+    });
+    if (!regInicio) {
+      throw new NotFoundException(
+        'Registro de inicio no encontrado o no te pertenece',
+      );
+    }
+
+    // 2. Verificar que no haya ya un fin en el mismo día
+    const fechaDia = new Date(regInicio.registradoEn)
+      .toISOString()
+      .split('T')[0];
+    const yaExisteFin = await this.repo
+      .createQueryBuilder('r')
+      .where('r.conductor_id = :cid', { cid: conductorId })
+      .andWhere('r.vehiculo_id = :vid', { vid: regInicio.vehiculo.id })
+      .andWhere('r.momento = :m', { m: MomentoKm.FIN })
+      .andWhere(
+        `DATE(r.registrado_en AT TIME ZONE 'America/Bogota') = :fecha`,
+        { fecha: fechaDia },
+      )
+      .getOne();
+
+    if (yaExisteFin) {
+      throw new BadRequestException('Este turno ya tiene km fin registrado');
+    }
+
+    // 3. km fin no puede ser menor al inicio
+    if (dto.kmFin < regInicio.kmValor) {
+      throw new BadRequestException(
+        `El km fin (${dto.kmFin}) no puede ser menor al km inicio (${regInicio.kmValor})`,
+      );
+    }
+
+    // 4. Insertar registro de fin — SIN validar asignación por fecha
+    const regFin = this.repo.create({
+      vehiculo: regInicio.vehiculo,
+      conductor: { id: conductorId } as any,
+      kmValor: dto.kmFin,
+      momento: MomentoKm.FIN,
+    });
+    await this.repo.save(regFin);
+
+    // 5. Actualizar km del vehículo y recalcular predicción (igual que flujo normal)
+    await this.vehiculosService.actualizar(regInicio.vehiculo.id, {
+      kmActual: dto.kmFin,
+    } as any);
+    const resPred = await this.prediccionService.calcularPrediccion(
+      regInicio.vehiculo.id,
+    );
+    await this.planesService.recalcularPrediccion(
+      regInicio.vehiculo.id,
+      resPred.kmPorDia,
+    );
+
+    return regFin;
   }
 
   async calcularKmPorDia(vehiculoId: number) {

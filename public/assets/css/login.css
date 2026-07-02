@@ -403,8 +403,7 @@
     /* ── RESPONSIVE ── */
     @media (max-width: 768px) {
       .page { grid-template-columns: 1fr; }
-      .video-side { height: 40vh; }
-      .video-side::after { display: none; }
-      .form-side { padding: 28px 20px; }
+      .video-side { display: none; }
+      .form-side { padding: 28px 20px; min-height: 100vh; }
       html, body { overflow: auto; }
     }

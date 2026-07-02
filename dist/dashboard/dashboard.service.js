@@ -63,7 +63,7 @@ let DashboardService = class DashboardService {
        FROM alerta
        WHERE vehiculo_id = $1 AND leida = FALSE ${filtroAlertas.sql}
        ORDER BY generada_en DESC`, [vehiculoId, ...filtroAlertas.params]);
-        const planes = await this.dataSource.query(`SELECT id, nombre, tipo_ciclo AS "tipoCiclo",
+        const planesDb = await this.dataSource.query(`SELECT id, nombre, tipo_ciclo AS "tipoCiclo",
               km_proximo AS "kmProximo",
               fecha_proxima::text AS "fechaProxima",
               CASE WHEN km_proximo IS NOT NULL
@@ -73,6 +73,18 @@ let DashboardService = class DashboardService {
        FROM plan_mantenimiento
        WHERE vehiculo_id = $1 AND activo = TRUE
        ORDER BY km_proximo ASC NULLS LAST`, [vehiculoId]);
+        const snapshot = await this.prediccionService.getSnapshotVehiculo(vehiculoId);
+        const planes = planesDb.map(p => {
+            const pred = prediccion.predicciones.find(pr => pr.planId === p.id);
+            let fProx = p.fechaProxima || pred?.fechaEstimada || null;
+            if (!fProx && snapshot && snapshot.planNombre === p.nombre) {
+                fProx = snapshot.fechaEstimada;
+            }
+            return {
+                ...p,
+                fechaProxima: fProx,
+            };
+        });
         const hoy = new Date();
         const documentosRaw = await this.dataSource.query(`SELECT id, tipo, fecha_vencimiento::text, vencido
        FROM documento_legal

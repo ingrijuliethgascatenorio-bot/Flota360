@@ -163,6 +163,7 @@ export class PrediccionService {
         if (kmRestantes <= 0) {
           diasEstimados = 0;
           color         = ColorUrgencia.ROJO;
+          fechaEstimada = hoy.toISOString().split('T')[0];
         } else if (kmDiaRes.kmPorDia && kmDiaRes.kmPorDia > 0) {
           diasEstimados = Math.ceil(kmRestantes / kmDiaRes.kmPorDia);
           const fe      = new Date(hoy);

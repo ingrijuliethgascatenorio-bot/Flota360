@@ -7,9 +7,11 @@ import {
   ParseIntPipe,
   UseGuards,
   Request,
+  ForbiddenException,
 } from '@nestjs/common';
 import { KilometrajeService } from './kilometraje.service';
 import { CreateRegistroKmDto } from './dto/create-registro-km.dto';
+import { CerrarPendienteDto } from './dto/cerrar-pendiente.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -53,5 +55,43 @@ export class KilometrajeController {
     @Request() req,
   ) {
     return this.service.kmInicioEncadenado(vehiculoId, req.user.id);
+  }
+}
+
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('conductores/:conductorId/kilometraje')
+export class ConductorKilometrajeController {
+  constructor(private readonly service: KilometrajeService) {}
+
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.TECNICO, RolUsuario.CONDUCTOR)
+  @Get()
+  historialConductor(@Param('conductorId', ParseIntPipe) conductorId: number) {
+    return this.service.historialConductor(conductorId);
+  }
+
+  // GET /conductores/:conductorId/kilometraje/pendientes
+  @Roles(RolUsuario.CONDUCTOR, RolUsuario.ADMINISTRADOR)
+  @Get('pendientes')
+  turnosPendientes(@Param('conductorId', ParseIntPipe) conductorId: number) {
+    return this.service.turnosPendientes(conductorId);
+  }
+
+  // POST /conductores/:conductorId/kilometraje/pendientes/:registroInicioId/cerrar
+  @Roles(RolUsuario.CONDUCTOR, RolUsuario.ADMINISTRADOR)
+  @Post('pendientes/:registroInicioId/cerrar')
+  cerrarPendiente(
+    @Param('conductorId', ParseIntPipe) conductorId: number,
+    @Param('registroInicioId', ParseIntPipe) registroInicioId: number,
+    @Body() dto: CerrarPendienteDto,
+    @Request() req,
+  ) {
+    if (req.user.rol === RolUsuario.CONDUCTOR && req.user.id !== conductorId) {
+      throw new ForbiddenException('Solo puedes cerrar tus propios turnos');
+    }
+    return this.service.cerrarTurnoPendiente(
+      conductorId,
+      registroInicioId,
+      dto,
+    );
   }
 }

@@ -106,11 +106,11 @@ let ReportesService = class ReportesService {
         }
         if (filtros.fechaDesde) {
             params.push(filtros.fechaDesde);
-            clauses.push(`AND ot.fecha_apertura >= $${params.length}::date`);
+            clauses.push(`AND ot.fecha_cierre >= $${params.length}::date`);
         }
         if (filtros.fechaHasta) {
             params.push(filtros.fechaHasta);
-            clauses.push(`AND ot.fecha_apertura <= $${params.length}::date`);
+            clauses.push(`AND ot.fecha_cierre < ($${params.length}::date + INTERVAL '1 day')`);
         }
         return clauses.join('\n');
     }

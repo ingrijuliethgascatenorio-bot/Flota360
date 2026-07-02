@@ -1,0 +1,1055 @@
+const usuario = requireRole('Tecnico');
+if (!usuario) throw new Error('stop');
+
+let misOrdenes    = [];
+let misRepsCache  = []; // cache de reparaciones (órdenes cerradas)
+let vehTec        = [];
+let repuestosTemp = [];   // repuestos en formulario activo
+let fotosTemp     = [];   // fotos adjuntas (File[])
+let ordenEditId   = null; // id de la orden en edición
+let tecAlertasCache = []; // caché de alertas para filtros
+
+(function init() {
+  const ini = usuario.nombre.charAt(0).toUpperCase();
+  const d   = new Date();
+  const h   = d.getHours();
+  document.getElementById('av').textContent        = ini;
+  document.getElementById('av2').textContent       = ini;
+  document.getElementById('u-name').textContent    = usuario.nombre;
+  document.getElementById('u-title').textContent   = usuario.nombre;
+  document.getElementById('dash-date').textContent = d.toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'long'});
+  document.getElementById('greeting').textContent  = h<12?'Buenos días,':h<18?'Buenas tardes,':'Buenas noches,';
+
+  cargarMisOrdenes();
+  cargarVehiculos();
+  cargarAlertasDash();
+  // Popup de notificación al ingresar (via notifications.js)
+  setTimeout(async () => {
+    await asegurarOrdenesTecnico();
+    let alertasTec = [];
+    try {
+      const ra = await api('GET', '/alertas');
+      alertasTec = ra.data || ra || [];
+    } catch {}
+    fcMostrarPopupTecnico(alertasTec, misOrdenes);
+  }, 1400);
+})();
+
+function showPage(id, title) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  // Sincronizar top nav
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(`nav-${id}`)?.classList.add('active');
+  // Sincronizar bottom nav (circulo azul) sin importar desde donde se llame
+  document.querySelectorAll('.t-bn-item').forEach(b => b.classList.remove('active'));
+  document.getElementById(`bn-${id}`)?.classList.add('active');
+
+  document.getElementById(`page-${id}`)?.classList.add('active');
+  document.getElementById('page-title').textContent = title;
+  if (id === 'alertas')   cargarAlertasFull();
+  if (id === 'vehiculos') cargarMisReparaciones();
+}
+
+function ordenesPendientesComoAlertas() {
+  return (misOrdenes || [])
+    .filter(o => o.estado === 'Abierta')
+    .map(o => ({
+      tipoAlerta: 'orden_nueva',
+      mensaje: `Orden #${o.id} asignada: ${o.descripcion || 'Sin descripcion'}`,
+      placa: o.vehiculo?.placa || o.placa || 'N/D',
+      generadaEn: o.createdAt || o.fechaApertura || new Date().toISOString(),
+      ordenId: o.id,
+    }));
+}
+
+async function asegurarOrdenesTecnico() {
+  if (misOrdenes.length) return;
+  const res = await api('GET', '/ordenes');
+  const todas = res.data || res || [];
+  misOrdenes = todas.filter(o => o.tecnico?.id === usuario.id || o.tecnicoId === usuario.id);
+}
+
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+// �RDENES DEL T�0CNICO
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+
+// ���� Paginación órdenes activas ��������������������������������
+const ORD_PER_PAGE = 10;
+let ordPagActual   = 1;
+let ordListaActual = [];
+
+async function cargarMisOrdenes() {
+  try {
+    const res   = await api('GET', '/ordenes');
+    const todas = res.data || res || [];
+    misOrdenes  = todas.filter(o => o.tecnico?.id === usuario.id || o.tecnicoId === usuario.id);
+
+    const hoy = new Date().toISOString().split('T')[0];
+    document.getElementById('cnt-abiertas').textContent = misOrdenes.filter(o => o.estado === 'Abierta').length;
+    document.getElementById('cnt-proceso').textContent  = misOrdenes.filter(o => o.estado === 'En proceso').length;
+    document.getElementById('cnt-cerradas').textContent = misOrdenes.filter(o => o.estado === 'Cerrada' && o.fechaCierre?.startsWith(hoy)).length;
+
+    // Dashboard: solo activas, máx 5
+    const activas = misOrdenes.filter(o => o.estado === 'Abierta' || o.estado === 'En proceso');
+    _renderOrdenesFijas(activas.slice(0, 5), 'tb-mis-recientes');
+
+    // Tabla principal: solo activas, con paginación
+    renderMisOrdenes(activas, 'tb-mis-ord');
+
+    // Gr�fica de gastos mensuales
+    drawMonthlyChart();
+  } catch (err) {
+    document.getElementById('tb-mis-recientes').innerHTML =
+      `<tr><td colspan="7" class="td-loading">Error: ${err.message}</td></tr>`;
+  }
+}
+
+// Render sin paginación (dashboard recientes)
+function _renderOrdenesFijas(lista, tbId) {
+  const tb = document.getElementById(tbId);
+  if (!tb) return;
+  tb.innerHTML = lista.length
+    ? lista.map(o => _ordenFila(o)).join('')
+    : `<tr><td colspan="7" class="td-loading">Sin órdenes pendientes</td></tr>`;
+}
+
+// Render con paginación (tabla principal)
+function renderMisOrdenes(lista, tbId) {
+  ordListaActual = lista;
+  ordPagActual   = 1;
+  _renderOrdPag();
+}
+
+function _ordenFila(o) {
+  const est = (o.estado||'').toLowerCase().replace(' ', '-');
+  let acciones = '';
+  if (o.estado === 'Abierta') {
+    acciones = `
+      <button class="btn-ghost btn-sm" onclick="abrirFotosAntesEIniciar(${o.id})"><i class="fa-solid fa-play"></i> Iniciar</button>`;
+  } else if (o.estado === 'En proceso') {
+    acciones = `
+      <button class="btn-ghost btn-sm" style="color:var(--green)" onclick="abrirCostosYCerrar(${o.id})"><i class="fa-solid fa-check"></i> Cerrar</button>`;
+  }
+  return `<tr>
+    <td data-label="#">#${o.id}</td>
+    <td data-label="Vehículo">${o.vehiculo?.placa||'�'}</td>
+    <td data-label="Plan">${o.plan?.nombre||'Correctivo'}</td>
+    <td data-label="Apertura">${fmtFecha(o.fechaApertura)}</td>
+    <td data-label="Estado"><span class="badge-estado ${est}">${o.estado}</span></td>
+    <td data-label="Costo">$${fmt(o.costoTotal||0)}</td>
+    <td data-label="Acciones"><div class="action-btns">
+      <button class="btn-ghost btn-sm" onclick="abrirDetalleOrden(${o.id})">Ver</button>
+      ${acciones}
+    </div></td></tr>`;
+}
+
+function _renderOrdPag() {
+  const tb    = document.getElementById('tb-mis-ord');
+  const total = ordListaActual.length;
+  const pages = Math.max(1, Math.ceil(total / ORD_PER_PAGE));
+  ordPagActual = Math.min(Math.max(1, ordPagActual), pages);
+  if (!tb) return;
+
+  if (!total) {
+    tb.innerHTML = `<tr><td colspan="7" class="td-loading">Sin órdenes pendientes</td></tr>`;
+    _renderPagTec(0, 1, 0);
+    return;
+  }
+
+  const desde  = (ordPagActual - 1) * ORD_PER_PAGE;
+  tb.innerHTML = ordListaActual.slice(desde, desde + ORD_PER_PAGE).map(o => _ordenFila(o)).join('');
+  _renderPagTec(total, pages, ordPagActual);
+}
+
+function _renderPagTec(total, pages, current) {
+  let cont = document.getElementById('t-ord-pagination');
+  if (!cont) {
+    const sc = document.querySelector('#page-ordenes .t-section-card');
+    if (!sc) return;
+    cont = document.createElement('div');
+    cont.id = 't-ord-pagination';
+    cont.className = 't-pagination';
+    sc.appendChild(cont);
+  }
+  if (pages <= 1) { cont.innerHTML = ''; return; }
+
+  const desde = (current - 1) * ORD_PER_PAGE + 1;
+  const hasta = Math.min(current * ORD_PER_PAGE, total);
+  const nums  = _tPagNums(current, pages);
+  const btns  = nums.map(n =>
+    n === '⬦'
+      ? `<span class="t-pag-dots">⬦</span>`
+      : `<button class="t-pag-btn${n===current?' active':''}" onclick="ordPagActual=${n};_renderOrdPag()">${n}</button>`
+  ).join('');
+
+  cont.innerHTML = `
+    <div class="t-pag-inner">
+      <button class="t-pag-btn" onclick="ordPagActual--;_renderOrdPag()" ${current===1?'disabled':''}>⬹</button>
+      ${btns}
+      <button class="t-pag-btn" onclick="ordPagActual++;_renderOrdPag()" ${current===pages?'disabled':''}>⬺</button>
+      <span class="t-pag-info">${desde}�${hasta} de ${total}</span>
+    </div>`;
+}
+
+function _tPagNums(cur, total) {
+  if (total <= 7) return Array.from({length:total}, (_, i) => i + 1);
+  const s = new Set([1, total, cur, cur-1, cur+1].filter(n => n >= 1 && n <= total));
+  const arr = [...s].sort((a, b) => a - b);
+  const res = [];
+  arr.forEach((n, i) => { if (i && n - arr[i-1] > 1) res.push('⬦'); res.push(n); });
+  return res;
+}
+
+function filtrarMisOrdenes() {
+  const q   = document.getElementById('search-mis').value.toLowerCase();
+  const est = document.getElementById('filtro-estado-ord').value;
+  // Base: solo activas
+  let lista = misOrdenes.filter(o => o.estado === 'Abierta' || o.estado === 'En proceso');
+  if (q)   lista = lista.filter(o => (o.vehiculo?.placa||'').toLowerCase().includes(q) || String(o.id).includes(q));
+  if (est) lista = lista.filter(o => o.estado === est);
+  ordPagActual = 1;
+  renderMisOrdenes(lista, 'tb-mis-ord');
+}
+
+async function cambiarEstado(id, estado) {
+  if (!estado) return;
+  try {
+    await api('PATCH', `/ordenes/${id}/estado`, { estado });
+    toast(`Orden #${id} �  ${estado}`, 'success');
+    cargarMisOrdenes();
+  } catch (err) { toast(err.message, 'error'); }
+}
+
+async function cambiarEstadoConfirm(id, estado) {
+  const msg = estado === 'Cerrada'
+    ? `¿Cerrar la orden #${id}? Asegúrate de haber registrado costos y fotos.`
+    : `¿Iniciar la orden #${id}? Pasará a "En proceso".`;
+  const tipo = estado === 'Cerrada' ? 'warning' : 'info';
+  const confirmado = await fcConfirm({
+    title: estado === 'Cerrada' ? '¿Cerrar orden?' : '¿Iniciar orden?',
+    message: msg,
+    okText: estado === 'Cerrada' ? '<i class="fa-solid fa-check"></i> Cerrar' : '<i class="fa-solid fa-play"></i> Iniciar',
+    cancelText: 'Cancelar',
+    type: tipo,
+    icon: estado === 'Cerrada' ? '<i class="fa-solid fa-flag-checkered"></i>' : '<i class="fa-solid fa-play"></i>',
+  });
+  if (!confirmado) return;
+  await cambiarEstado(id, estado);
+}
+
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+// FOTOS ANTES (orden Abierta)
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+// INICIAR ORDEN � pide fotos ANTES y cambia a "En proceso" al guardar
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+async function abrirFotosAntesEIniciar(id) {
+  ordenEditId = id;
+  fotosTemp   = [];
+
+  document.getElementById('fc-title').innerHTML = `Orden #${id} � <i class="fa-solid fa-camera"></i> Fotos ANTES de iniciar`;
+
+  // Ocultar sección costos/repuestos � solo fotos al iniciar
+  const secCostos = document.getElementById('fc-seccion-costos');
+  if (secCostos) secCostos.style.display = 'none';
+
+  // Fijar tipo en 'antes' y ocultar el selector
+  const tipoEl = document.getElementById('fc-tipo-foto');
+  if (tipoEl) {
+    tipoEl.value = 'antes';
+    const fg = tipoEl.closest('.field-group');
+    if (fg) fg.style.display = 'none';
+  }
+
+  // Texto del botón guardar
+  const btn = document.getElementById('btn-guardar-costos');
+  if (btn) btn.innerHTML = '<i class="fa-solid fa-play"></i> Guardar fotos e Iniciar';
+
+  // Modo para que guardarCostos sepa qué hacer al terminar
+  document.getElementById('m-form-costos').dataset.modo = 'iniciar';
+
+  renderFotosPrev();
+  openModal('m-form-costos');
+}
+
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+// CERRAR ORDEN � pide costos + fotos DESPU�0S y cierra automáticamente
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+async function abrirCostosYCerrar(id) {
+  ordenEditId   = id;
+  repuestosTemp = [];
+  fotosTemp     = [];
+
+  document.getElementById('fc-title').textContent = `Orden #${id} �  Costos y fotos para cerrar`;
+
+  // Mostrar sección costos
+  const secCostos = document.getElementById('fc-seccion-costos');
+  if (secCostos) secCostos.style.display = '';
+
+  // Fijar tipo en 'despues' y ocultar el selector
+  const tipoEl = document.getElementById('fc-tipo-foto');
+  if (tipoEl) {
+    tipoEl.value = 'despues';
+    const fg = tipoEl.closest('.field-group');
+    if (fg) fg.style.display = 'none';
+  }
+
+  // Texto del botón guardar
+  const btn = document.getElementById('btn-guardar-costos');
+  if (btn) btn.innerHTML = '<i class="fa-solid fa-check"></i> Guardar y Cerrar orden';
+
+  // Modo para que guardarCostos sepa qué hacer al terminar
+  document.getElementById('m-form-costos').dataset.modo = 'cerrar';
+
+  document.getElementById('fc-mano-obra').value   = '';
+  document.getElementById('fc-descripcion').value = '';
+  document.getElementById('rep-nombre').value     = '';
+  document.getElementById('rep-cantidad').value   = '';
+  document.getElementById('rep-precio').value     = '';
+  renderRepuestos();
+  renderFotosPrev();
+  openModal('m-form-costos');
+
+  // Pre-cargar datos existentes
+  try {
+    const res = await api('GET', `/ordenes/${id}`);
+    const o   = res.data || res;
+    if (o.costoManoObra) document.getElementById('fc-mano-obra').value = o.costoManoObra;
+    if (o.descripcion)   document.getElementById('fc-descripcion').value = o.descripcion;
+    if (o.repuestos?.length) {
+      repuestosTemp = o.repuestos.map(r => ({
+        nombre: r.nombreRepuesto, cantidad: r.cantidad, precio: r.precioUnitario
+      }));
+      renderRepuestos();
+    }
+    recalcularTotal();
+  } catch {}
+}
+
+function agregarRepuesto() {
+  const nombre   = document.getElementById('rep-nombre').value.trim();
+  const cantidad = parseFloat(document.getElementById('rep-cantidad').value) || 0;
+  const precio   = parseFloat(document.getElementById('rep-precio').value) || 0;
+
+  if (!nombre)       { toast('Ingresa el nombre del repuesto', 'error'); return; }
+  if (cantidad <= 0) { toast('Cantidad debe ser mayor a 0', 'error'); return; }
+  if (precio <= 0)   { toast('Precio debe ser mayor a 0', 'error'); return; }
+
+  repuestosTemp.push({ nombre, cantidad, precio });
+  document.getElementById('rep-nombre').value   = '';
+  document.getElementById('rep-cantidad').value = '';
+  document.getElementById('rep-precio').value   = '';
+  renderRepuestos();
+  recalcularTotal();
+}
+
+function eliminarRepuesto(idx) {
+  repuestosTemp.splice(idx, 1);
+  renderRepuestos();
+  recalcularTotal();
+}
+
+function renderRepuestos() {
+  const tb = document.getElementById('tb-repuestos');
+  if (!tb) return;
+  if (!repuestosTemp.length) {
+    tb.innerHTML = '<tr><td colspan="5" class="td-loading" style="font-size:12px">Sin repuestos agregados</td></tr>';
+    return;
+  }
+  tb.innerHTML = repuestosTemp.map((r, i) => `
+    <tr>
+      <td data-label="Repuesto">${r.nombre}</td>
+      <td data-label="Cant.">${r.cantidad}</td>
+      <td data-label="Precio unit.">$${fmt(r.precio)}</td>
+      <td data-label="Subtotal">$${fmt(r.cantidad * r.precio)}</td>
+      <td data-label=""><button class="btn-ghost btn-sm" onclick="eliminarRepuesto(${i})" style="color:var(--red);padding:2px 8px">�S" Quitar</button></td>
+    </tr>`).join('');
+}
+
+function recalcularTotal() {
+  const manoObra    = parseFloat(document.getElementById('fc-mano-obra').value) || 0;
+  const subRepuestos = repuestosTemp.reduce((s, r) => s + r.cantidad * r.precio, 0);
+  const total        = manoObra + subRepuestos;
+  const el = document.getElementById('fc-total-preview');
+  if (el) el.textContent = '$' + fmt(total);
+}
+
+// ���� Gestión de fotos ����������������������������������������������������
+function agregarFotos(input) {
+  const archivos = Array.from(input.files);
+  for (const f of archivos) {
+    if (fotosTemp.length >= 5) { toast('Máximo 5 fotos por orden', 'error'); break; }
+    if (!f.type.match(/image\/(jpeg|png)/)) { toast(f.name + ': solo JPG/PNG', 'error'); continue; }
+    const totalBytes = fotosTemp.reduce((s, x) => s + x.size, 0) + f.size;
+    if (totalBytes > 10 * 1024 * 1024) { toast('Límite de 10 MB total alcanzado', 'error'); break; }
+    fotosTemp.push(f);
+  }
+  input.value = '';
+  renderFotosPrev();
+}
+
+function eliminarFoto(idx) {
+  fotosTemp.splice(idx, 1);
+  renderFotosPrev();
+}
+
+function renderFotosPrev() {
+  const c = document.getElementById('fotos-preview');
+  if (!c) return;
+  if (!fotosTemp.length) {
+    c.innerHTML = '<div class="fotos-empty"><i class="fa-solid fa-camera"></i> Sin fotos adjuntas � máx. 5 fotos JPG/PNG (10 MB total)</div>';
+    return;
+  }
+  c.innerHTML = fotosTemp.map((f, i) => {
+    const url = URL.createObjectURL(f);
+    return `<div class="foto-thumb">
+      <img src="${url}" alt="${f.name}" onclick="verFotoGrande('${url}','${f.name}')"/>
+      <button class="foto-del" onclick="eliminarFoto(${i})">�S"</button>
+      <div class="foto-name">${f.name.length > 18 ? f.name.substring(0,16)+'⬦' : f.name}</div>
+    </div>`;
+  }).join('');
+}
+
+function verFotoGrande(url, nombre) {
+  document.getElementById('foto-grande-img').src           = url;
+  document.getElementById('foto-grande-nombre').textContent = nombre;
+  openModal('m-foto-grande');
+}
+
+// ���� Guardar costos y fotos ����������������������������������������
+async function guardarCostos() {
+  if (!ordenEditId) return;
+
+  const modal    = document.getElementById('m-form-costos');
+  const modo     = modal.dataset.modo || 'costos'; // 'iniciar' | 'cerrar' | 'costos'
+  const tipoFoto = document.getElementById('fc-tipo-foto').value;
+
+  // Validacion: fotos obligatorias
+  if (fotosTemp.length === 0) {
+    const labelFoto = modo === 'iniciar'
+      ? 'Debes agregar al menos una foto del ANTES de la reparacion para iniciar.'
+      : 'Debes agregar al menos una foto del DESPUES de la reparacion para cerrar la orden.';
+    toast(labelFoto, 'error');
+    return;
+  }
+
+  // Validacion extra al cerrar: mano de obra obligatoria
+  if (modo === 'cerrar') {
+    const manoObraVal = parseFloat(document.getElementById('fc-mano-obra').value) || 0;
+    if (manoObraVal <= 0) {
+      toast('Debes ingresar el costo de mano de obra antes de cerrar la orden.', 'error');
+      return;
+    }
+  }
+
+  const manoObra    = parseFloat(document.getElementById('fc-mano-obra').value) || 0;
+  const descripcion = document.getElementById('fc-descripcion').value.trim();
+
+  const btn = document.getElementById('btn-guardar-costos');
+  btn.disabled    = true;
+  btn.textContent = 'Guardando⬦';
+
+  try {
+    // 1) Costos, descripcion y repuestos (solo en modo cerrar o costos)
+    if (modo !== 'iniciar') {
+      await api('PATCH', `/ordenes/${ordenEditId}/costos`, {
+        costoManoObra: manoObra,
+        descripcion,
+        repuestos: repuestosTemp.map(r => ({
+          nombreRepuesto: r.nombre,
+          cantidad: r.cantidad,
+          precioUnitario: r.precio
+        }))
+      });
+    }
+
+    // 2) Fotos (multipart) - siempre hay al menos una (validado arriba)
+    const fd = new FormData();
+    fotosTemp.forEach(f => fd.append('files', f));
+    fd.append('tipoFoto', tipoFoto);
+    await apiForm('POST', `/ordenes/${ordenEditId}/fotos`, fd);
+
+    // 3) Cambio de estado automatico segun modo
+    if (modo === 'iniciar') {
+      await api('PATCH', `/ordenes/${ordenEditId}/estado`, { estado: 'En proceso' });
+      toast(`Orden #${ordenEditId} iniciada`, 'success');
+    } else if (modo === 'cerrar') {
+      await api('PATCH', `/ordenes/${ordenEditId}/estado`, { estado: 'Cerrada' });
+      toast(`Orden #${ordenEditId} cerrada`, 'success');
+    } else {
+      toast('Guardado correctamente', 'success');
+    }
+
+    closeModal('m-form-costos');
+    cargarMisOrdenes();
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    btn.disabled    = false;
+    btn.textContent = 'Guardar';
+    delete modal.dataset.modo;
+  }
+}
+
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+// DETALLE ORDEN
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+async function abrirDetalleOrden(id) {
+  document.getElementById('mdo-title').textContent = `Orden #${id}`;
+  document.getElementById('mdo-body').innerHTML    = '<div class="td-loading">Cargando⬦</div>';
+  openModal('m-det-ord');
+  try {
+    const res = await api('GET', `/ordenes/${id}`);
+    const o   = res.data || res;
+    const est = (o.estado||'').toLowerCase().replace(' ','-');
+
+    let html = `<div class="detalle-section"><h4>Datos de la orden</h4>
+      <div class="detalle-grid">
+        <div class="dg-item"><span class="dg-label">Vehículo</span><span class="dg-val">${o.vehiculo?.placa||'�'}</span></div>
+        <div class="dg-item"><span class="dg-label">Estado</span><span class="dg-val"><span class="badge-estado ${est}">${o.estado}</span></span></div>
+        <div class="dg-item"><span class="dg-label">Apertura</span><span class="dg-val">${fmtFecha(o.fechaApertura)}</span></div>
+        <div class="dg-item"><span class="dg-label">Mano de obra</span><span class="dg-val">$${fmt(o.costoManoObra||0)}</span></div>
+        <div class="dg-item"><span class="dg-label">Costo total</span><span class="dg-val" style="font-weight:700;color:var(--blue-700);font-size:15px">$${fmt(o.costoTotal||0)}</span></div>
+        <div class="dg-item"><span class="dg-label">Plan</span><span class="dg-val">${o.plan?.nombre||'Correctivo'}</span></div>
+      </div>
+      ${o.descripcion ? `<div style="margin-top:10px;background:var(--slate-50);padding:10px 14px;border-radius:8px;font-size:13px;color:var(--text-md)">${o.descripcion}</div>` : ''}
+    </div>`;
+
+    // Repuestos
+    if (o.repuestos?.length) {
+      const totalRep = o.repuestos.reduce((s, r) => s + (parseFloat(r.subtotal) || (r.cantidad * r.precioUnitario) || 0), 0);
+      html += `<div class="detalle-section"><h4>Repuestos (${o.repuestos.length})</h4>
+        <table class="data-table"><thead><tr><th>Repuesto</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th></tr></thead>
+        <tbody>${o.repuestos.map(r => {
+          const sub = parseFloat(r.subtotal) || (r.cantidad * r.precioUnitario) || 0;
+          return `<tr>
+            <td data-label="Repuesto">${r.nombreRepuesto}</td>
+            <td data-label="Cant.">${r.cantidad}</td>
+            <td data-label="Precio unit.">$${fmt(r.precioUnitario)}</td>
+            <td data-label="Subtotal">$${fmt(sub)}</td></tr>`;
+        }).join('')}
+          <tr style="background:var(--slate-50);font-weight:600">
+            <td colspan="3" style="text-align:right;padding-right:12px">Total repuestos:</td>
+            <td>$${fmt(totalRep)}</td>
+          </tr>
+        </tbody></table></div>`;
+    } else {
+      html += `<div class="detalle-section"><h4>Repuestos</h4><p style="font-size:13px;color:var(--text-lt)">Sin repuestos registrados.</p></div>`;
+    }
+
+    // Galería de fotos � se carga aparte para no depender de la relación eager
+    let fotos = o.fotos || [];
+    if (!fotos.length) {
+      try {
+        const fRes = await api('GET', `/ordenes/${id}/fotos`);
+        const gal  = fRes.data || fRes;
+        console.log('GAL:', gal);
+        fotos = [...(gal.antes || []), ...(gal.despues || [])];
+      } catch {}
+    }
+
+    if (fotos.length) {
+      html += `<div class="detalle-section"><h4><i class="fa-solid fa-images"></i> Galería (${fotos.length} fotos)</h4>
+        <div class="galeria-grid">${fotos.map(f => {
+          const url = apiAssetUrl(f.url);
+          const etiqueta = f.tipoFoto === 'antes' ? '�x� ANTES' : f.tipoFoto === 'despues' ? '�xx� DESPU�0S' : (f.tipoFoto||'FOTO').toUpperCase();
+          return `
+          <div class="galeria-item" onclick="window.open('${url}','_blank')" style="cursor:pointer">
+            <img src="${url}" alt="Foto" loading="lazy" onerror="this.src='';this.parentElement.style.background='var(--slate-100)'"/>
+            <div class="galeria-caption">${etiqueta} · ${fmtFecha(f.tomadaEn)}</div>
+          </div>`;
+        }).join('')}</div></div>`;
+    } else {
+      html += `<div class="detalle-section"><h4><i class="fa-solid fa-images"></i> Galería de fotos</h4><p style="font-size:13px;color:var(--text-lt)">Sin fotos adjuntas.</p></div>`;
+    }
+
+    // Botones de accion � alineados con el nuevo flujo de fotos obligatorias
+    if (o.estado === 'Abierta') {
+      html += `<div style="padding:14px 0;border-top:1.5px solid var(--slate-100);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn-ghost btn-sm" onclick="closeModal('m-det-ord');abrirFotosAntesEIniciar(${id})"><i class="fa-solid fa-play"></i> Iniciar (requiere foto ANTES)</button>
+      </div>`;
+    } else if (o.estado === 'En proceso') {
+      html += `<div style="padding:14px 0;border-top:1.5px solid var(--slate-100);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn-ghost btn-sm" style="color:var(--green)" onclick="closeModal('m-det-ord');abrirCostosYCerrar(${id})"><i class="fa-solid fa-check"></i> Cerrar (requiere costos y foto DESPU�0S)</button>
+      </div>`;
+    }
+
+    document.getElementById('mdo-body').innerHTML = html;
+  } catch (err) {
+    document.getElementById('mdo-body').innerHTML = `<div class="td-loading" style="color:var(--red)">Error: ${err.message}</div>`;
+  }
+}
+
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+// VEHÍCULOS (solo lectura)
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+async function cargarVehiculos() {
+  try {
+    const res = await api('GET', '/dashboard');
+    vehTec    = res.data?.vehiculos || [];
+    renderVehiculosTec(vehTec);
+  } catch {}
+}
+
+function renderVehiculosTec(lista) {
+  const g = document.getElementById('veh-grid-tec');
+  if (!g) return;
+  g.innerHTML = lista.length ? lista.map(v => {
+    const s = v.estadoSemaforo || 'verde';
+    return `<div class="veh-card ${s}" onclick="abrirDetalleVehiculo(${v.vehiculoId})">
+      <div class="veh-header">
+        <div><div class="veh-placa">${v.placa}</div><div class="veh-marca">${v.marca} ${v.modelo}</div></div>
+        <span class="veh-sem-badge ${s}">${s}</span>
+      </div>
+      <div class="veh-stats">
+        <div class="veh-stat-item"><span class="vst-label">Km actual</span><span class="vst-val">${fmt(v.kmActual)} km</span></div>
+        <div class="veh-stat-item"><span class="vst-label">Alertas activas</span><span class="vst-val">${v.alertasActivas||0}</span></div>
+      </div>
+      ${v.alertasActivas > 0 ? `<div class="veh-alerts"><i class="fa-solid fa-bell"></i> ${v.alertasActivas} alerta(s)</div>` : ''}
+    </div>`;
+  }).join('') : '<div class="grid-loading">Sin vehículos</div>';
+}
+
+function filtrarVehiculosTec() {
+  const q = document.getElementById('search-veh-t').value.toLowerCase();
+  renderVehiculosTec(vehTec.filter(v =>
+    v.placa.toLowerCase().includes(q) || v.marca.toLowerCase().includes(q)));
+}
+
+async function abrirDetalleVehiculo(id) {
+  document.getElementById('mdv-title').textContent = 'Cargando⬦';
+  document.getElementById('mdv-body').innerHTML    = '<div class="td-loading">Cargando⬦</div>';
+  openModal('m-det-veh');
+  try {
+    const { data: d } = await api('GET', `/dashboard/vehiculos/${id}`);
+    const v = d.vehiculo;
+    document.getElementById('mdv-title').textContent = `${v.placa} � ${v.marca} ${v.modelo}`;
+    let html = `<div class="detalle-section"><h4>Datos</h4>
+      <div class="detalle-grid">
+        <div class="dg-item"><span class="dg-label">Placa</span><span class="dg-val">${v.placa}</span></div>
+        <div class="dg-item"><span class="dg-label">Marca / Modelo</span><span class="dg-val">${v.marca} ${v.modelo}</span></div>
+        <div class="dg-item"><span class="dg-label">Km actual</span><span class="dg-val">${fmt(v.kmActual)} km</span></div>
+        <div class="dg-item"><span class="dg-label">Estado</span><span class="dg-val"><span class="veh-sem-badge ${v.estadoSemaforo}">${v.estadoSemaforo}</span></span></div>
+      </div></div>`;
+    if (d.alertas?.length)
+      html += `<div class="detalle-section"><h4>Alertas (${d.alertas.length})</h4>
+        <div class="alertas-list-modal">${d.alertas.map(a => `
+          <div class="alert-item ${a.tipoAlerta}">
+            <span class="alert-icon">${iconAlerta(a.tipoAlerta)}</span>
+            <div class="alert-body"><div class="alert-msg">${a.mensaje}</div></div>
+          </div>`).join('')}</div></div>`;
+    if (d.planes?.length)
+      html += `<div class="detalle-section"><h4><i class="fa-solid fa-wrench"></i> Planes de mantenimiento</h4>
+        <table class="data-table"><thead><tr><th>Plan</th><th>Ciclo</th><th>Km restantes</th><th>Fecha próxima</th></tr></thead>
+        <tbody>${d.planes.map(p => `<tr>
+          <td>${p.nombre}</td><td>${p.tipoCiclo}</td>
+          <td>${p.kmRestantes !== null ? (p.kmRestantes <= 0 ? '<span style="color:var(--red);font-weight:600">¡Vencido!</span>' : fmt(p.kmRestantes)+' km') : '�'}</td>
+          <td>${p.fechaProxima||'�'}</td></tr>`).join('')}</tbody></table></div>`;
+
+    if (d.documentos?.length)
+      html += `<div class="detalle-section"><h4><i class="fa-solid fa-file-lines"></i> Documentos Legales</h4>
+        <div class="docs-grid-tec">${d.documentos.map(doc => {
+          const icon = doc.tipo === 'SOAT' ? '<i class="fa-solid fa-shield-halved"></i>' : '<i class="fa-solid fa-screwdriver-wrench"></i>';
+          const badge = doc.vencido ? 'badge-red' : (doc.diasRestantes < 15 ? 'badge-yellow' : 'badge-green');
+          return `
+          <div class="doc-tec-card ${doc.vencido ? 'vencido' : ''}">
+            <div class="doc-tec-icon">${icon}</div>
+            <div class="doc-tec-info">
+              <div class="doc-tec-name">${doc.tipo}</div>
+              <div class="doc-tec-date">Vence: ${fmtFecha(doc.fechaVencimiento)}</div>
+            </div>
+            <span class="doc-tec-status ${badge}">${doc.vencido ? 'Vencido' : doc.diasRestantes + ' días'}</span>
+          </div>`;
+        }).join('')}</div></div>`;
+    document.getElementById('mdv-body').innerHTML = html;
+  } catch (err) {
+    document.getElementById('mdv-body').innerHTML = `<div class="td-loading" style="color:var(--red)">Error: ${err.message}</div>`;
+  }
+}
+
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+// HELPERS DE ALERTAS
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+
+// Metadatos visuales por tipo de alerta
+function _alertaMeta(tipo) {
+  const map = {
+    orden_nueva:           { color:'blue',   bg:'#e8f0fe', border:'#1a56db', label:'Nueva orden',       emoji:'<i class="fa-solid fa-clipboard-list"></i>' },
+    mantenimiento_proximo: { color:'yellow', bg:'#fef9e7', border:'#f59e0b', label:'Mantenimiento',     emoji:'<i class="fa-solid fa-wrench"></i>' },
+    mantenimiento_vencido: { color:'red',    bg:'#fff0f0', border:'#ef4444', label:'¡Vencido!',         emoji:'<i class="fa-solid fa-circle-exclamation"></i>' },
+    documento_30dias:      { color:'yellow', bg:'#fef9e7', border:'#f59e0b', label:'Doc. por vencer',   emoji:'<i class="fa-solid fa-file-lines"></i>' },
+    documento_15dias:      { color:'orange', bg:'#fff4e6', border:'#f97316', label:'Doc. urgente',      emoji:'<i class="fa-solid fa-triangle-exclamation"></i>'  },
+    documento_7dias:       { color:'red',    bg:'#fff0f0', border:'#ef4444', label:'¡Doc. crítico!',    emoji:'<i class="fa-solid fa-circle-exclamation"></i>' },
+    documento_vencido:     { color:'red',    bg:'#fff0f0', border:'#ef4444', label:'Doc. vencido',      emoji:'<i class="fa-solid fa-circle-xmark"></i>' },
+  };
+  return map[tipo] || { color:'blue', bg:'#e8f0fe', border:'#1a56db', label:'Alerta', emoji:'<i class="fa-solid fa-bell"></i>' };
+}
+
+// Tiempo relativo tipo "hace 2 horas"
+function _tiempoRelativo(str) {
+  if (!str) return '';
+  const diff = Date.now() - new Date(str).getTime();
+  const min  = Math.floor(diff / 60000);
+  if (min < 1)   return 'Ahora mismo';
+  if (min < 60)  return `Hace ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24)    return `Hace ${h}h`;
+  const d = Math.floor(h / 24);
+  if (d === 1)   return 'Ayer';
+  if (d < 7)     return `Hace ${d} días`;
+  return fmtFecha(str);
+}
+
+// ���� Card compacta para DASHBOARD ����������������������������������
+function _renderAlertaDash(a) {
+  const m   = _alertaMeta(a.tipoAlerta);
+  const fullMsg = a.mensaje;
+  
+  // Versión corta para móvil
+  let shortDesc = fullMsg;
+  const matchComillas = fullMsg.match(/"([^"]+)"/);
+  if (matchComillas) {
+    shortDesc = matchComillas[1];
+  } else if (fullMsg.startsWith('Orden #')) {
+    const partes = fullMsg.split(': ');
+    if (partes.length > 1) shortDesc = partes.slice(1).join(': ');
+  } else {
+    if (fullMsg.includes('SOAT')) shortDesc = 'SOAT';
+    else if (fullMsg.includes('Tecnomecánica') || fullMsg.includes('TM') || fullMsg.includes('Revisión')) shortDesc = 'Tecnomecánica';
+  }
+
+  return `
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 10px; border-bottom: 1px solid var(--slate-100); cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='var(--slate-50)'" onmouseout="this.style.background='transparent'" onclick="${a.ordenId ? `abrirDetalleOrden(${a.ordenId})` : ''}">
+    <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
+      <div style="color: ${m.border}; font-size: 16px; display: flex; align-items: center; justify-content: center; width: 20px; flex-shrink: 0;">
+        ${m.emoji}
+      </div>
+      <div style="min-width: 0;">
+        <div class="ad-short" style="font-weight: 600; font-size: 13px; color: var(--navy); line-height: 1.3;">${shortDesc}</div>
+        <div class="ad-full" style="font-weight: 600; font-size: 14px; color: var(--navy); line-height: 1.3;">${fullMsg}</div>
+        <div style="font-size: 12px; color: var(--text-lt); margin-top: 2px;">�xa ${a.placa || 'N/D'}</div>
+      </div>
+    </div>
+    <span class="ad-badge" style="font-size: 11px; font-weight: 700; color: ${m.border}; background: ${m.bg}; padding: 3px 8px; border-radius: 99px; white-space: nowrap; margin-left: 8px;">${m.label}</span>
+  </div>`;
+}
+
+// ���� Card feed para SECCI�N ALERTAS ������������������������������
+function _renderAlertaFeed(a) {
+  const m = _alertaMeta(a.tipoAlerta);
+  let desc = a.mensaje;
+  if (desc.startsWith('Orden #')) {
+    const partes = desc.split(': ');
+    if (partes.length > 1) desc = partes.slice(1).join(': ');
+  }
+
+  return `
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--slate-100); cursor: pointer; transition: background 0.2s; background: #fff;" onmouseover="this.style.background='var(--slate-50)'" onmouseout="this.style.background='#fff'" onclick="${a.ordenId ? `abrirDetalleOrden(${a.ordenId})` : ''}">
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <div style="color: ${m.border}; font-size: 18px; display: flex; align-items: center; justify-content: center; width: 28px;">
+        ${m.emoji}
+      </div>
+      <div>
+        <div style="font-weight: 600; font-size: 15px; color: var(--navy); line-height: 1.3;">${desc}</div>
+        <div style="font-size: 13px; color: var(--text-lt); margin-top: 3px; display: flex; gap: 8px; align-items: center;">
+          <span>�xa ${a.placa || 'N/D'}</span>
+          <span style="color: var(--slate-300)">⬢</span>
+          <span>${_tiempoRelativo(a.generadaEn)}</span>
+        </div>
+      </div>
+    </div>
+    <div style="text-align: right;">
+      <span style="font-size: 11px; font-weight: 700; color: ${m.border}; background: ${m.bg}; padding: 4px 10px; border-radius: 99px; white-space: nowrap;">${m.label}</span>
+    </div>
+  </div>`;
+}
+
+// ���� Recopilar todas las alertas ��������������������������������������
+async function _recopilarAlertas(vehs) {
+  let todas = ordenesPendientesComoAlertas();
+  vehs.forEach(v => {
+    if (v.alertasDetalle?.length) {
+      v.alertasDetalle.forEach(a => {
+        // Ignorar alertas de documentos para el técnico
+        if (!a.tipoAlerta || !a.tipoAlerta.startsWith('documento_')) {
+          todas.push({ ...a, placa: v.placa });
+        }
+      });
+    }
+  });
+  todas.sort((a, b) => new Date(b.generadaEn) - new Date(a.generadaEn));
+  return todas;
+}
+
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+// ALERTAS FULL � sección feed estilo Facebook
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+async function cargarAlertasFull() {
+  const c = document.getElementById('alertas-full');
+  if (!c) return;
+  c.innerHTML = '<div class="td-loading">Cargando alertas⬦</div>';
+  try {
+    await asegurarOrdenesTecnico();
+    if (!vehTec.length) {
+      const r = await api('GET', '/dashboard');
+      vehTec  = r.data?.vehiculos || [];
+    }
+    tecAlertasCache = await _recopilarAlertas(vehTec);
+    filtrarAlertas();
+  } catch (err) {
+    c.innerHTML = `<div class="td-loading" style="color:var(--red)">Error: ${err.message}</div>`;
+  }
+}
+
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+// ALERTAS DASH � cards compactas en dashboard
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+async function cargarAlertasDash() {
+  const c = document.getElementById('alertas-dash');
+  if (!c) return;
+  try {
+    await asegurarOrdenesTecnico();
+    const r    = await api('GET', '/dashboard');
+    const vehs = r.data?.vehiculos || [];
+    vehTec = vehs; // guardar para reusar en cargarAlertasFull
+    const todas = await _recopilarAlertas(vehs);
+    const urgentes = todas.slice(0, 3);
+
+    if (!urgentes.length) {
+      c.innerHTML = `
+        <div class="ai-empty ai-empty-sm">
+          <div class="ai-empty-icon"><i class="fa-solid fa-circle-check"></i></div>
+          <div class="ai-empty-title">Sin alertas urgentes</div>
+        </div>`;
+    } else {
+      c.innerHTML = `<div class="ai-dash-list">${urgentes.map(a => _renderAlertaDash(a)).join('')}</div>`;
+    }
+
+    // Alimentar panel campana desktop (FC_ADMIN_PANEL) con las mismas alertas
+    if (typeof FC_ADMIN_PANEL !== 'undefined' && typeof FC_ADMIN_PANEL.addItems === 'function') {
+      const tipoMap = {
+        orden_nueva:           { icon: '<i class="fa-solid fa-clipboard-list"></i>', type: 'info'    },
+        mantenimiento_proximo: { icon: '<i class="fa-solid fa-wrench"></i>', type: 'warning' },
+        mantenimiento_vencido: { icon: '<i class="fa-solid fa-circle-exclamation"></i>', type: 'danger'  },
+        documento_30dias:      { icon: '<i class="fa-solid fa-file-lines"></i>', type: 'info'    },
+        documento_15dias:      { icon: '<i class="fa-solid fa-triangle-exclamation"></i>', type: 'warning' },
+        documento_7dias:       { icon: '<i class="fa-solid fa-circle-exclamation"></i>', type: 'danger'  },
+        documento_vencido:     { icon: '<i class="fa-solid fa-circle-xmark"></i>', type: 'danger'  },
+      };
+      const notifItems = todas.map((a, idx) => {
+        const cfg = tipoMap[a.tipoAlerta] || { icon: '<i class="fa-solid fa-bell"></i>', type: 'info' };
+        return {
+          id: a.ordenId ? `ord-${a.ordenId}` : `alerta-${idx}`,
+          icon: cfg.icon,
+          type: cfg.type,
+          msg: a.mensaje + (a.placa ? ` <strong>(${a.placa})</strong>` : ''),
+          time: typeof _tiempoRelativo === 'function' ? _tiempoRelativo(a.generadaEn) : 'Ahora',
+          unread: true,
+          _date: a.generadaEn,
+          onClick: () => showPage('alertas', 'Alertas'),
+        };
+      });
+      if (notifItems.length) FC_ADMIN_PANEL.addItems(notifItems);
+    }
+  } catch (err) {
+    c.innerHTML = `<div class="td-loading">Error cargando alertas</div>`;
+  }
+}
+// (popup al ingresar movido a notifications.js �  fcMostrarPopupTecnico)
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+// MIS REPARACIONES � órdenes cerradas con filtros
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+async function cargarMisReparaciones() {
+  const tb = document.getElementById('tb-mis-reps');
+  if (!tb) return;
+  tb.innerHTML = '<tr><td colspan="6" class="td-loading">Cargando reparaciones⬦</td></tr>';
+  try {
+    const res  = await api('GET', '/ordenes');
+    const toda = res.data || res || [];
+    // Solo las cerradas asignadas a este técnico
+    misRepsCache = toda.filter(o =>
+      (o.tecnico?.id === usuario.id || o.tecnicoId === usuario.id) &&
+      o.estado === 'Cerrada'
+    );
+    filtrarMisReps();
+  } catch(err) {
+    if (tb) tb.innerHTML = `<tr><td colspan="6" class="td-loading" style="color:var(--red)">Error: ${err.message}</td></tr>`;
+  }
+}
+
+function filtrarMisReps() {
+  const q     = (document.getElementById('search-reps')?.value || '').toLowerCase();
+  const desde = document.getElementById('reps-desde')?.value || '';
+  const hasta = document.getElementById('reps-hasta')?.value || '';
+  const tb    = document.getElementById('tb-mis-reps');
+  if (!tb) return;
+
+  let lista = [...misRepsCache];
+  if (q)     lista = lista.filter(o => (o.vehiculo?.placa || '').toLowerCase().includes(q));
+  if (desde) lista = lista.filter(o => (o.fechaCierre || o.fechaApertura || '') >= desde);
+  if (hasta) lista = lista.filter(o => (o.fechaCierre || o.fechaApertura || '') <= hasta);
+
+  if (!lista.length) {
+    tb.innerHTML = '<tr><td colspan="6" class="td-loading">Sin reparaciones encontradas</td></tr>';
+    return;
+  }
+
+  tb.innerHTML = lista.map(o => {
+    const fecha = o.fechaCierre || o.fechaApertura || '';
+    const costo = o.costoTotal != null ? '$' + Number(o.costoTotal).toLocaleString('es-CO') : '�';
+    return `<tr>
+      <td data-label="Vehículo">${o.vehiculo?.marca || ''} ${o.vehiculo?.modelo || ''}</td>
+      <td data-label="Placa"><strong>${o.vehiculo?.placa || '�'}</strong></td>
+      <td data-label="Fecha">${fecha ? fmtFecha(fecha) : '�'}</td>
+      <td data-label="Estado"><span class="estado-badge cerrada">Cerrada</span></td>
+      <td data-label="Costo total"><strong>${costo}</strong></td>
+      <td data-label="Acciones">
+        <button class="btn-ghost btn-sm" onclick="abrirDetalleOrden(${o.id})">
+          <i class="fa-solid fa-eye"></i> Ver
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function limpiarFiltrosReps() {
+  const s = document.getElementById('search-reps');
+  const d = document.getElementById('reps-desde');
+  const h = document.getElementById('reps-hasta');
+  if (s) s.value = '';
+  if (d) d.value = '';
+  if (h) h.value = '';
+  filtrarMisReps();
+}
+
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+// ALERTAS � filtro por fecha
+// �"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"��"�
+function filtrarAlertas() {
+  const q     = (document.getElementById('search-alertas')?.value || '').toLowerCase();
+  const desde = document.getElementById('alertas-desde')?.value || '';
+  const hasta = document.getElementById('alertas-hasta')?.value || '';
+
+  const c = document.getElementById('alertas-full');
+  if (!c) return;
+
+  let lista = [...tecAlertasCache];
+  if (q) {
+    lista = lista.filter(a => 
+      (a.mensaje || '').toLowerCase().includes(q) || 
+      (a.placa || '').toLowerCase().includes(q)
+    );
+  }
+  if (desde) lista = lista.filter(a => (a.generadaEn || '').slice(0, 10) >= desde);
+  if (hasta) lista = lista.filter(a => (a.generadaEn || '').slice(0, 10) <= hasta);
+
+  if (!lista.length) {
+    c.innerHTML = `<div class="ai-empty">
+      <div class="ai-empty-icon"><i class="fa-solid fa-circle-check"></i></div>
+      <div class="ai-empty-title">Sin alertas en ese rango</div>
+    </div>`;
+    return;
+  }
+  c.innerHTML = `<div class="ai-feed-list">${lista.map(a => _renderAlertaFeed(a)).join('')}</div>`;
+}
+
+function limpiarFiltrosAlertas() {
+  const s = document.getElementById('search-alertas');
+  const d = document.getElementById('alertas-desde');
+  const h = document.getElementById('alertas-hasta');
+  if (s) s.value = '';
+  if (d) d.value = '';
+  if (h) h.value = '';
+  filtrarAlertas();
+}
+
+function drawMonthlyChart() {
+  const ctx = document.getElementById('tec-monthly-chart');
+  if (!ctx) return;
+
+  // Filtrar �rdenes cerradas (reparaciones completadas)
+  const cerradas = misOrdenes.filter(o => o.estado === 'Cerrada');
+
+  // Nombres de meses en espa�ol
+  const mesesNombres = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const ultimosMeses = [];
+  const hoy = new Date();
+  
+  // Generar los �ltimos 6 meses en orden cronol�gico
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    ultimosMeses.push({
+      year: d.getFullYear(),
+      month: d.getMonth(),
+      label: mesesNombres[d.getMonth()],
+      total: 0
+    });
+  }
+
+  // Agrupar costos reales por mes
+  cerradas.forEach(o => {
+    const fechaStr = o.fechaCierre || o.createdAt || o.fechaApertura;
+    if (!fechaStr) return;
+    const date = new Date(fechaStr);
+    const y = date.getFullYear();
+    const m = date.getMonth();
+
+    const mesData = ultimosMeses.find(item => item.year === y && item.month === m);
+    if (mesData) {
+      const costo = parseFloat(o.costoTotal);
+      mesData.total += isNaN(costo) ? 0 : costo;
+    }
+  });
+
+  const labels = ultimosMeses.map(item => item.label);
+  const values = ultimosMeses.map(item => item.total);
+
+  // Destruir gr�fica anterior si existe para evitar superposiciones
+  if (window.tecChartInstance) {
+    window.tecChartInstance.destroy();
+  }
+
+  // Crear la gr�fica con Chart.js
+  window.tecChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Gastos de Reparaci�n ($)',
+        data: values,
+        backgroundColor: 'rgba(26, 86, 219, 0.15)',
+        borderColor: 'rgba(26, 86, 219, 1)',
+        borderWidth: 2,
+        borderRadius: 6,
+        barThickness: 24
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return 'Total: $' + context.raw.toLocaleString('es-CO');
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grid: { color: 'rgba(0, 0, 0, 0.05)' },
+          ticks: {
+            callback: function(value) {
+              return '$' + value.toLocaleString('es-CO');
+            }
+          }
+        },
+        x: {
+          grid: { display: false }
+        }
+      }
+    }
+  });
+}

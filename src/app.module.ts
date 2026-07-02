@@ -25,7 +25,7 @@ import { ReportesModule } from './reportes/reportes.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { PrediccionModule } from './prediccion/prediccion.module';
 import { SaludFinancieraModule } from './salud-financiera/salud-financiera.module';
-
+import { NovedadesModule } from './novedades/novedades.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
@@ -81,6 +81,7 @@ import { SaludFinancieraModule } from './salud-financiera/salud-financiera.modul
     ReportesModule,
     PrediccionModule,
     SaludFinancieraModule,
+    NovedadesModule,
     DashboardModule, // ← debe ir al final (depende de Prediccion y Salud)
   ],
 })

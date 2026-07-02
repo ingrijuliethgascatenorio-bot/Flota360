@@ -1,309 +1,538 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>FlotaControl 360 — Conductor</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
-    rel="stylesheet" />
-  <link rel="stylesheet" href="../assets/css/style.css" />
-  <link rel="stylesheet" href="../assets/css/conductor.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../assets/css/conductor.css"/>
 </head>
-
 <body>
 
-  <!-- ═══ TOP NAV ═══════════════════════════════════ -->
-  <nav class="c-topnav topbar">
-    <a class="c-brand" href="#">
-      <div class="c-brand-icon">
-        <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
-          <path d="M6 22 Q16 8 26 22" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" />
-          <circle cx="16" cy="22" r="3" fill="white" />
-        </svg>
+<!-- ═══ TOP NAV ═══════════════════════════════════ -->
+<nav class="c-topnav topbar">
+  <a class="c-brand" href="#">
+    <div class="c-brand-icon">
+      <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
+        <path d="M6 22 Q16 8 26 22" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <circle cx="16" cy="22" r="3" fill="white"/>
+      </svg>
+    </div>
+    <div>
+      <div class="c-brand-name">FlotaControl</div>
+      <div class="c-brand-ver">360° Conductor</div>
+    </div>
+  </a>
+
+  <div class="c-nav-links">
+    <div class="nav-item active" id="nav-km" onclick="showPage('km','Registrar kilómetros')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1018 0A9 9 0 003 12z"/><path d="M12 8v4l3 3"/></svg></span>
+      <span class="nav-label">Registrar Km</span>
+    </div>
+    <div class="nav-item" id="nav-historial" onclick="showPage('historial','Mi historial')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></span>
+      <span class="nav-label">Mi historial</span>
+    </div>
+    <div class="nav-item" id="nav-vehiculos" onclick="showPage('vehiculos','Mis vehículos')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 01-2-2V7a2 2 0 012-2h13l4 4v6a2 2 0 01-2 2h-2"/><circle cx="8.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></span>
+      <span class="nav-label">Mis vehículos</span>
+    </div>
+    <div class="nav-item" id="nav-novedades" onclick="showPage('novedades','Novedades')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+      <span class="nav-label">Novedades</span>
+    </div>
+    <div class="nav-item" id="nav-alertas" onclick="showPage('alertas','Alertas')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></span>
+      <span class="nav-label">Alertas</span>
+    </div>
+  </div>
+
+  <div class="c-nav-right">
+    <div class="c-avatar-wrap" onclick="this.classList.toggle('open')">
+      <div class="c-avatar" id="av2">C</div>
+      <div class="c-user-info">
+        <span class="c-user-name" id="u-name">—</span>
+        <span class="c-rol-badge">Conductor</span>
       </div>
+      <svg class="c-caret" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      <div class="c-dropdown">
+        <div class="c-dd-header">
+          <div class="c-dd-avatar" id="av">C</div>
+          <div>
+            <div class="c-dd-name" id="u-title">—</div>
+            <div class="c-dd-role">Conductor</div>
+          </div>
+        </div>
+        <div class="c-dd-sep"></div>
+        <button class="c-dd-item danger" onclick="logout()">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ═══ MAIN ══════════════════════════════════════ -->
+<main class="c-main">
+  <div id="page-title" style="display:none"></div>
+
+  <!-- ██  REGISTRAR KM  ██ -->
+  <section id="page-km" class="page active">
+
+    <!-- HERO -->
+    <div class="c-hero ima">
+      <div class="c-hero-content">
+        <p class="c-hero-sub">Bienvenido</p>
+        <p class="c-hero-desc">Gestiona tu bus y registros<br>desde un solo lugar.<br>Tu información en<br>movimiento.</p>
+      </div>
+      <div class="c-hero-icon">
+        <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1018 0A9 9 0 003 12z"/><path d="M12 8v4l3 3"/></svg>
+      </div>
+    </div>
+
+    <!-- RESUMEN DEL DÍA -->
+    <div class="dash-section-title">Resumen del día</div>
+    <div class="dash-resumen-list">
+      <div class="dash-resumen-item">
+        <div class="dash-resumen-left">
+          <div class="dash-resumen-icon-wrap" style="background:#eff6ff">
+            <svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </div>
+          <span class="dash-resumen-label">Registros hoy</span>
+        </div>
+        <div class="dash-resumen-right">
+          <span class="dash-resumen-val" id="stat-hoy">0</span>
+          <svg class="dash-resumen-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+      <div class="dash-resumen-item">
+        <div class="dash-resumen-left">
+          <div class="dash-resumen-icon-wrap" style="background:#fff7ed">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <span class="dash-resumen-label">Pendientes de registro hoy</span>
+        </div>
+        <div class="dash-resumen-right">
+          <span class="dash-resumen-val" id="stat-km">0</span>
+          <svg class="dash-resumen-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+      <div class="dash-resumen-item" style="border-bottom:none">
+        <div class="dash-resumen-left">
+          <div class="dash-resumen-icon-wrap" style="background:#f0fdf4">
+            <svg viewBox="0 0 24 24"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 000 13v3c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+          </div>
+          <span class="dash-resumen-label">Vehículos disponibles</span>
+        </div>
+        <div class="dash-resumen-right">
+          <span class="dash-resumen-val" id="stat-vehs">0</span>
+          <svg class="dash-resumen-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div>
+    <!-- subs ocultos para compatibilidad JS -->
+    <div id="stat-hoy-sub" style="display:none"></div>
+    <div id="stat-km-sub" style="display:none"></div>
+    <div id="stat-vehs-sub" style="display:none"></div>
+
+    <!-- TURNO DE HOY -->
+    <div class="dash-section-title" style="margin-top:20px">
+      Turno de hoy
+      <svg viewBox="0 0 24 24" class="dash-section-ico"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    </div>
+    <div class="turno-badge-card" id="turno-info-card" style="display:none">
+      <div class="turno-icon" id="turno-icon">🕐</div>
       <div>
-        <div class="c-brand-name">FlotaControl</div>
-        <div class="c-brand-ver">360° Conductor</div>
+        <div class="turno-info-label">Tu turno asignado hoy</div>
+        <div class="turno-info-nombre" id="turno-nombre">—</div>
+        <div class="turno-info-hora" id="turno-hora">—</div>
       </div>
-    </a>
-
-    <div class="c-nav-links">
-      <div class="nav-item active" id="nav-km" onclick="showPage('km','Registrar kilómetros')">
-        <span class="nav-icon"><svg viewBox="0 0 24 24">
-            <path d="M3 12a9 9 0 1018 0A9 9 0 003 12z" />
-            <path d="M12 8v4l3 3" />
-          </svg></span>
-        <span class="nav-label">Registrar Km</span>
+    </div>
+    <div class="dash-turno-card" id="dash-turno-card" style="display:none">
+      <div class="dash-turno-row">
+        <div class="dash-turno-col">
+          <div class="dash-turno-sublabel">Inicio</div>
+          <div class="dash-turno-hora" id="dash-turno-inicio">—</div>
+        </div>
+        <div class="dash-turno-col dash-turno-col-right">
+          <div class="dash-turno-sublabel">Estado</div>
+          <span class="dash-turno-estado" id="dash-turno-estado">—</span>
+        </div>
       </div>
-      <div class="nav-item" id="nav-historial" onclick="showPage('historial','Mi historial')">
-        <span class="nav-icon"><svg viewBox="0 0 24 24">
-            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-            <path d="M14 2v6h6" />
-            <line x1="16" y1="13" x2="8" y2="13" />
-            <line x1="16" y1="17" x2="8" y2="17" />
-          </svg></span>
-        <span class="nav-label">Mi historial</span>
-      </div>
-      <div class="nav-item" id="nav-vehiculos" onclick="showPage('vehiculos','Mis vehículos')">
-        <span class="nav-icon"><svg viewBox="0 0 24 24">
-            <path d="M5 17H3a2 2 0 01-2-2V7a2 2 0 012-2h13l4 4v6a2 2 0 01-2 2h-2" />
-            <circle cx="8.5" cy="17.5" r="2.5" />
-            <circle cx="17.5" cy="17.5" r="2.5" />
-          </svg></span>
-        <span class="nav-label">Mis vehículos</span>
+      <div class="dash-turno-row" style="margin-top:14px">
+        <div class="dash-turno-col">
+          <div class="dash-turno-sublabel">Fin</div>
+          <div class="dash-turno-hora" id="dash-turno-fin">—</div>
+        </div>
+        <div class="dash-turno-col dash-turno-col-right">
+          <div class="dash-turno-sublabel">Tiempo restante</div>
+          <div class="dash-turno-tiempo" id="dash-turno-tiempo">—</div>
+        </div>
       </div>
     </div>
 
-    <div class="c-nav-right">
-      <!-- Avatar -->
-      <div class="c-avatar-wrap" onclick="this.classList.toggle('open')">
-        <div class="c-avatar" id="av2">C</div>
-        <div class="c-user-info">
-          <span class="c-user-name" id="u-name">—</span>
-          <span class="c-rol-badge">Conductor</span>
-        </div>
-        <svg class="c-caret" viewBox="0 0 24 24">
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-        <div class="c-dropdown">
-          <div class="c-dd-header">
-            <div class="c-dd-avatar" id="av">C</div>
-            <div>
-              <div class="c-dd-name" id="u-title">—</div>
-              <div class="c-dd-role">Conductor</div>
-            </div>
-          </div>
-          <div class="c-dd-sep"></div>
-          <button class="c-dd-item danger" onclick="logout()">
-            <svg viewBox="0 0 24 24">
-              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
-            </svg>
-            Cerrar sesión
-          </button>
-        </div>
-      </div>
+    <!-- MI VEHÍCULO ASIGNADO -->
+    <div id="km-info-card" class="c-info-card" style="display:none">
+      <svg viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 01-2-2V7a2 2 0 012-2h13l4 4v6a2 2 0 01-2 2h-2"/><circle cx="8.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+      <div><strong id="km-veh-nombre">—</strong> &nbsp;·&nbsp; Km actual: <strong id="km-veh-actual">—</strong></div>
     </div>
-  </nav>
-
-  <!-- ═══ MAIN ══════════════════════════════════════ -->
-  <main class="c-main">
-    <div id="page-title" style="display:none"></div>
-
-    <!-- ██  REGISTRAR KM  ██ -->
-    <section id="page-km" class="page active">
-
-      <!-- Hero -->
-      <div class="c-hero">
-        <div class="c-hero-content">
-          <p class="c-hero-sub">Bienvenido,</p>
-          <h1 class="c-hero-title" id="u-title-km">Conductor</h1>
-          <p class="c-hero-desc">Registra el kilometraje de tu vehículo al inicio y fin de cada turno.</p>
+    <div class="dash-section-title" style="margin-top:4px">Mi vehículo asignado</div>
+    <div class="dash-veh-card" id="dash-veh-card" style="display:none">
+      <div class="dash-veh-header">
+        <div class="dash-veh-icon-wrap">
+          <svg viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 01-2-2V7a2 2 0 012-2h13l4 4v6a2 2 0 01-2 2h-2"/><circle cx="8.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
         </div>
-        <div class="c-hero-icon">
-          <svg viewBox="0 0 24 24">
-            <path d="M3 12a9 9 0 1018 0A9 9 0 003 12z" />
-            <path d="M12 8v4l3 3" />
-          </svg>
+        <div class="dash-veh-info">
+          <div class="dash-veh-nombre" id="dash-veh-nombre">—</div>
+          <div class="dash-veh-placa" id="dash-veh-placa">—</div>
+        </div>
+        <span class="dash-veh-badge" id="dash-veh-badge">Disponible</span>
+      </div>
+      <div class="dash-veh-stats">
+        <div class="dash-veh-stat">
+          <div class="dash-veh-stat-label">Último registro</div>
+          <div class="dash-veh-stat-val" id="dash-veh-ultimo">—</div>
+        </div>
+        <div class="dash-veh-stat">
+          <div class="dash-veh-stat-label">Kilómetros hoy</div>
+          <div class="dash-veh-stat-val" id="dash-veh-kmhoy">—</div>
         </div>
       </div>
+      <button class="dash-veh-detalle" onclick="showPage('historial','Mi historial')">
+        Ver detalles
+        <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
 
-      <!-- Stats -->
-      <div class="c-stat-grid">
-        <div class="c-stat-card">
-          <div class="c-stat-num" id="stat-hoy">—</div>
-          <div class="c-stat-label">Registros hoy</div>
-        </div>
-        <div class="c-stat-card">
-          <div class="c-stat-num" id="stat-km">—</div>
-          <div class="c-stat-label">Km registrados hoy</div>
-        </div>
-        <div class="c-stat-card">
-          <div class="c-stat-num" id="stat-vehs">—</div>
-          <div class="c-stat-label">Vehículos disponibles</div>
-        </div>
-      </div>
-
-      <!-- Info vehículo seleccionado -->
-      <div id="km-info-card" class="c-info-card" style="display:none">
-        <svg viewBox="0 0 24 24">
-          <path d="M5 17H3a2 2 0 01-2-2V7a2 2 0 012-2h13l4 4v6a2 2 0 01-2 2h-2" />
-          <circle cx="8.5" cy="17.5" r="2.5" />
-          <circle cx="17.5" cy="17.5" r="2.5" />
-        </svg>
-        <div><strong id="km-veh-nombre">—</strong> &nbsp;·&nbsp; Km actual: <strong id="km-veh-actual">—</strong></div>
-      </div>
-
-      <!-- Turno asignado -->
-      <div class="turno-badge-card" id="turno-info-card" style="display:none">
-        <div class="turno-icon" id="turno-icon">🕐</div>
+    <!-- NUEVO REGISTRO -->
+    <div class="dash-nuevo-registro" onclick="document.getElementById('form-km').scrollIntoView({behavior:'smooth'})">
+      <div class="dash-nuevo-left">
+        <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
         <div>
-          <div class="turno-info-label">Tu turno asignado hoy</div>
-          <div class="turno-info-nombre" id="turno-nombre">—</div>
-          <div class="turno-info-hora" id="turno-hora">—</div>
+          <div class="dash-nuevo-title">Nuevo registro</div>
+          <div class="dash-nuevo-sub">Registra kilómetros o inicia tu registro</div>
         </div>
       </div>
+      <svg class="dash-nuevo-arrow" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+    </div>
 
-      <!-- Formulario registro KM -->
-      <div class="c-form-card">
-        <div class="c-form-card-title">
-          <svg viewBox="0 0 24 24">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-            <circle cx="12" cy="10" r="3" />
-          </svg>
-          Nuevo registro
-        </div>
-        <form id="form-km" class="c-form">
-          <div class="field-group">
-            <label>Selecciona el vehículo</label>
-            <select id="km-vehiculo" onchange="onVehiculoChange()" required>
-              <option value="">— Seleccione un vehículo —</option>
-            </select>
-          </div>
-          <div class="field-group">
-            <label>Momento del registro</label>
-            <select id="km-momento" required>
-              <option value="inicio">Inicio de turno</option>
-              <option value="fin">Fin de turno</option>
-            </select>
-          </div>
-          <div class="field-group">
-            <label>Kilómetros en el odómetro</label>
-            <input type="number" id="km-valor" min="0" placeholder="Selecciona un vehículo primero" required />
-          </div>
-          <button type="submit" class="c-btn-submit">
-            <svg viewBox="0 0 24 24">
-              <path d="M3 12a9 9 0 1018 0A9 9 0 003 12z" />
-              <path d="M12 8v4l3 3" />
-            </svg>
-            Registrar kilómetros
-          </button>
-        </form>
+    <!-- Turnos pendientes por cerrar -->
+    <div id="turnos-pendientes-cont"></div>
 
-        <!-- Resultado exitoso -->
-        <div class="c-result-card" id="km-result">
-          <div class="c-result-title">
-            <svg viewBox="0 0 24 24">
-              <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
-            Registro exitoso
-          </div>
-          <div class="c-result-val" id="km-result-val">—</div>
-        </div>
+    <!-- Banner modo cierre activo -->
+    <div id="cierre-pendiente-banner" class="cierre-banner" style="display:none">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="cierre-banner-txt"></span>
+      <button onclick="cancelarCierrePendiente()">Cancelar</button>
+    </div>
+
+    <div class="c-form-card">
+      <div class="c-form-card-title">
+        <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        Nuevo registro
       </div>
-    </section>
-
-    <!-- ██  HISTORIAL  ██ -->
-    <section id="page-historial" class="page">
-      <div class="c-page-hdr">
-        <div>
-          <h1 class="c-page-title">Mi historial</h1>
-          <p class="c-page-sub">Registros de kilometraje</p>
-        </div>
-      </div>
-      <div class="c-filters-bar">
-        <div class="c-search-wrap">
-          <svg viewBox="0 0 24 24">
-            <circle cx="11" cy="11" r="8" />
-            <path d="M21 21l-4.35-4.35" />
-          </svg>
-          <input type="text" id="search-hist" placeholder="Buscar por fecha o vehículo…" oninput="filtrarHistorial()" />
-        </div>
-        <div class="c-filter-group">
-          <select id="hist-vehiculo" onchange="filtrarHistorial()">
-            <option value="">Todos mis vehículos</option>
+      <form id="form-km" class="c-form">
+        <div class="field-group">
+          <label>Selecciona el vehículo</label>
+          <select id="km-vehiculo" onchange="onVehiculoChange()" required>
+            <option value="">— Seleccione un vehículo —</option>
           </select>
         </div>
+        <div class="field-group">
+          <label>Momento del registro</label>
+          <select id="km-momento" required>
+            <option value="inicio">Inicio de turno</option>
+            <option value="fin">Fin de turno</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Kilómetros en el odómetro</label>
+          <input type="number" id="km-valor" min="0" placeholder="Selecciona un vehículo primero" required/>
+        </div>
+        <button type="submit" class="c-btn-submit">
+          <svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1018 0A9 9 0 003 12z"/><path d="M12 8v4l3 3"/></svg>
+          Registrar kilómetros
+        </button>
+      </form>
+      <div class="c-result-card" id="km-result">
+        <div class="c-result-title">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Registro exitoso
+        </div>
+        <div class="c-result-val" id="km-result-val">—</div>
       </div>
-      <div class="c-section-card">
-        <div class="c-table-wrap">
-          <table class="c-table">
-            <thead>
-              <tr>
-                <th>Fecha y hora</th>
-                <th>Vehículo</th>
-                <th>Momento</th>
-                <th>Km registrado</th>
-              </tr>
-            </thead>
-            <tbody id="tb-hist">
-              <tr>
-                <td colspan="4" class="td-loading">Cargando historial…</td>
-              </tr>
-            </tbody>
-          </table>
+    </div>
+  </section>
+
+  <!-- ██  HISTORIAL  ██ -->
+  <section id="page-historial" class="page">
+    <div class="c-page-hdr">
+      <div>
+        <h1 class="c-page-title">Mi historial</h1>
+        <p class="c-page-sub">Registros de kilometraje</p>
+      </div>
+    </div>
+
+    <!-- ── Filtros desktop ── -->
+    <div class="c-filters-bar hist-desktop-only">
+      <div class="c-search-wrap">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="search-hist" placeholder="Buscar por fecha o vehículo…" oninput="filtrarHistorial()"/>
+      </div>
+      <div class="c-filter-group">
+        <select id="hist-vehiculo" onchange="filtrarHistorial()">
+          <option value="">Todos mis vehículos</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- ── Vista desktop: tabla ── -->
+    <div class="c-section-card hist-desktop-only">
+      <div class="c-table-wrap">
+        <table class="c-table">
+          <thead>
+            <tr>
+              <th>Fecha y hora</th><th>Vehículo</th><th>Momento</th><th>Km registrado</th>
+            </tr>
+          </thead>
+          <tbody id="tb-hist">
+            <tr><td colspan="4" class="td-loading">Cargando historial…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div id="c-hist-pagination" class="hist-desktop-only"></div>
+
+    <!-- ── Vista móvil: cards ── -->
+    <div class="hist-mobile-only">
+      <!-- Buscador móvil -->
+      <div class="hist-search-wrap">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="search-hist-mobile" placeholder="Buscar por fecha o vehículo..." oninput="filtrarHistorialMobile()"/>
+      </div>
+      <!-- Pills -->
+      <div class="hist-pills-bar">
+        <button class="hist-pill active" data-filtro="todos"  onclick="setFiltroHist('todos',this)">Todos</button>
+        <button class="hist-pill"        data-filtro="hoy"    onclick="setFiltroHist('hoy',this)">Hoy</button>
+        <button class="hist-pill"        data-filtro="semana" onclick="setFiltroHist('semana',this)">Semana</button>
+        <button class="hist-pill"        data-filtro="mes"    onclick="setFiltroHist('mes',this)">Mes</button>
+        <button class="hist-pill hist-pill-icon"              onclick="abrirFiltroFecha()">
+          <svg viewBox="0 0 24 24"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+        </button>
+        <input type="date" id="hist-fecha-picker" style="display:none" onchange="setFiltroFechaPicker(this.value)"/>
+      </div>
+      <!-- Cards agrupadas por fecha -->
+      <div id="hist-cards-container">
+        <div class="hist-loading">Cargando historial…</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ██  MIS VEHÍCULOS  ██ -->
+  <section id="page-vehiculos" class="page">
+    <div class="c-page-hdr">
+      <div>
+        <h1 class="c-page-title">Mis vehículos</h1>
+        <p class="c-page-sub">Vehículos asignados a ti</p>
+      </div>
+    </div>
+    <div class="vehiculos-grid" id="veh-grid-cond">
+      <div class="grid-loading">Cargando vehículos…</div>
+    </div>
+  </section>
+
+  <!-- ██  NOVEDADES  ██ -->
+  <section id="page-novedades" class="page">
+
+    <!-- Encabezado -->
+    <div class="c-page-hdr">
+      <div>
+        <h1 class="c-page-title">Reportar novedad</h1>
+        <p class="c-page-sub">Informa cualquier problema con tu vehículo asignado</p>
+      </div>
+    </div>
+
+    <!-- Tarjeta de reporte -->
+    <div class="nov-card-v2">
+
+      <!-- Vehículo asignado -->
+      <div class="nov-veh-card" id="nov-veh-card" style="display:none">
+        <div class="nov-veh-icon">
+          <svg viewBox="0 0 24 24"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 1 13v3c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>
+        </div>
+        <div class="nov-veh-info">
+          <div class="nov-veh-label">Bus asignado</div>
+          <div class="nov-veh-placa" id="nov-veh-placa">—</div>
+          <div class="nov-veh-modelo" id="nov-veh-modelo">—</div>
+        </div>
+        <span class="nov-veh-badge" id="nov-veh-badge">Activo</span>
+      </div>
+
+      <form id="form-novedad" class="c-form">
+        <div class="field-group">
+          <label>Tipo de novedad</label>
+          <div class="nov-select-wrap">
+            <svg class="nov-select-icon" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <select id="nov-tipo" required>
+              <option value="">Seleccione el tipo</option>
+              <option value="Falla mecánica">Falla mecánica</option>
+              <option value="Frenos">Frenos</option>
+              <option value="Luces">Luces</option>
+              <option value="Llantas">Llantas</option>
+              <option value="Motor">Motor</option>
+              <option value="Accidente">Accidente</option>
+              <option value="Otro">Otro</option>
+            </select>
+            <svg class="nov-select-chevron" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>Descripción</label>
+          <textarea id="nov-descripcion" rows="4" maxlength="500"
+            placeholder="Describe con detalle qué ocurrió, cuándo y cómo…" required></textarea>
+          <div class="nov-char-count"><span id="nov-char-count">0</span>/500</div>
+        </div>
+
+        <div class="nov-info-banner">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span>La novedad será enviada al área de mantenimiento para su revisión y gestión.</span>
+        </div>
+
+        <button type="submit" class="nov-btn-enviar">
+          <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Enviar novedad
+        </button>
+        <button type="button" class="nov-btn-cancelar" onclick="cancelarNovedad()">Cancelar</button>
+      </form>
+
+      <!-- Resultado exitoso -->
+      <div class="c-result-card nov-result-v2" id="nov-result" style="display:none">
+        <div class="c-result-title">
+          <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Novedad reportada correctamente
+        </div>
+        <div style="margin-top:8px;font-size:14px;color:var(--text-md)">
+          <strong>Tipo:</strong> <span id="nov-result-tipo">—</span><br>
+          <strong>Vehículo:</strong> <span id="nov-result-placa">—</span><br>
+          <small id="nov-result-fecha" style="color:var(--text-lt)"></small>
         </div>
       </div>
-    </section>
+    </div>
 
-    <!-- ██  MIS VEHÍCULOS  ██ -->
-    <section id="page-vehiculos" class="page">
-      <div class="c-page-hdr">
-        <div>
-          <h1 class="c-page-title">Mis vehículos</h1>
-          <p class="c-page-sub">Vehículos asignados a ti</p>
-        </div>
+    <!-- Historial de novedades -->
+    <div class="c-page-hdr" style="margin-top:28px">
+      <div>
+        <h2 class="c-page-title" style="font-size:18px">Mis novedades reportadas</h2>
+        <p class="c-page-sub">Seguimiento de tus reportes</p>
       </div>
-      <div class="vehiculos-grid" id="veh-grid-cond">
-        <div class="grid-loading">Cargando vehículos…</div>
+    </div>
+    <div class="c-filters-bar">
+      <div class="c-search-wrap">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="search-nov" placeholder="Buscar por tipo o vehículo…" oninput="filtrarMisNovedades()"/>
       </div>
-    </section>
+      <div class="c-filter-group">
+        <select id="filtro-nov-estado" onchange="filtrarMisNovedades()">
+          <option value="">Todos los estados</option>
+          <option value="Pendiente">Pendiente</option>
+          <option value="Aprobada">Aprobada</option>
+          <option value="Rechazada">Rechazada</option>
+        </select>
+      </div>
+    </div>
+    <div class="c-section-card">
+      <div class="c-table-wrap">
+        <table class="c-table">
+          <thead>
+            <tr>
+              <th>Fecha</th><th>Vehículo</th><th>Tipo</th><th>Estado</th><th>OT generada</th>
+            </tr>
+          </thead>
+          <tbody id="tb-novedades">
+            <tr><td colspan="5" class="td-loading">Cargando novedades…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
 
-  </main>
+  <!-- ██  ALERTAS  ██ -->
+  <section id="page-alertas" class="page">
+    <div class="c-page-hdr">
+      <div>
+        <h1 class="c-page-title">Alertas del sistema</h1>
+        <p class="c-page-sub">Asignaciones de vehículos y turnos</p>
+      </div>
+    </div>
+    <div class="c-filters-bar">
+      <div class="c-search-wrap">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="search-alertas-cond" placeholder="Buscar por placa o turno…" oninput="filtrarAlertasCond()"/>
+      </div>
+      <div class="c-filter-group">
+        <input type="date" id="fecha-alertas-cond" onchange="filtrarAlertasCond()" style="padding:10px 14px;border:1px solid var(--slate-200);border-radius:12px;outline:none;font-family:inherit;font-size:14px;color:var(--navy);width:100%;"/>
+      </div>
+    </div>
+    <div class="c-section-card" style="padding:0;overflow:hidden;border-radius:12px;margin-top:16px">
+      <div id="alertas-full"><div class="td-loading">Cargando alertas…</div></div>
+      <div id="c-alertas-pagination"></div>
+    </div>
+  </section>
 
-  <!-- ═══ BOTTOM NAV (móvil) ════════════════════════ -->
-  <nav class="c-bottom-nav">
-    <button class="c-bn-item active" id="bn-km" onclick="cbnNav('km','Registrar kilómetros',this)">
-      <div class="c-bn-circle"></div>
-      <div class="c-bn-icon"><svg viewBox="0 0 24 24">
-          <path d="M3 12a9 9 0 1018 0A9 9 0 003 12z" />
-          <path d="M12 8v4l3 3" />
-        </svg></div>
-      <span class="c-bn-label">Registrar</span>
-    </button>
-    <button class="c-bn-item" id="bn-historial" onclick="cbnNav('historial','Mi historial',this)">
-      <div class="c-bn-circle"></div>
-      <div class="c-bn-icon"><svg viewBox="0 0 24 24">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-          <path d="M14 2v6h6" />
-          <line x1="16" y1="13" x2="8" y2="13" />
-          <line x1="16" y1="17" x2="8" y2="17" />
-        </svg></div>
-      <span class="c-bn-label">Historial</span>
-    </button>
-    <button class="c-bn-item" id="bn-vehiculos" onclick="cbnNav('vehiculos','Mis vehículos',this)">
-      <div class="c-bn-circle"></div>
-      <div class="c-bn-icon"><svg viewBox="0 0 24 24">
-          <path d="M5 17H3a2 2 0 01-2-2V7a2 2 0 012-2h13l4 4v6a2 2 0 01-2 2h-2" />
-          <circle cx="8.5" cy="17.5" r="2.5" />
-          <circle cx="17.5" cy="17.5" r="2.5" />
-        </svg></div>
-      <span class="c-bn-label">Vehículos</span>
-    </button>
-  </nav>
+</main>
 
-  <div id="toast" class="toast"></div>
+<!-- ═══ BOTTOM NAV (móvil) ════════════════════════ -->
+<nav class="c-bottom-nav">
+  <button class="c-bn-item active" id="bn-km" onclick="cbnNav('km','Registrar kilómetros',this)">
+    <div class="c-bn-circle"></div>
+    <div class="c-bn-icon"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1018 0A9 9 0 003 12z"/><path d="M12 8v4l3 3"/></svg></div>
+    <span class="c-bn-label">Registrar</span>
+  </button>
+  <button class="c-bn-item" id="bn-historial" onclick="cbnNav('historial','Mi historial',this)">
+    <div class="c-bn-circle"></div>
+    <div class="c-bn-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+    <span class="c-bn-label">Historial</span>
+  </button>
+  <button class="c-bn-item" id="bn-vehiculos" onclick="cbnNav('vehiculos','Mis vehículos',this)">
+    <div class="c-bn-circle"></div>
+    <div class="c-bn-icon"><svg viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 01-2-2V7a2 2 0 012-2h13l4 4v6a2 2 0 01-2 2h-2"/><circle cx="8.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></div>
+    <span class="c-bn-label">Vehículos</span>
+  </button>
+  <button class="c-bn-item" id="bn-novedades" onclick="cbnNav('novedades','Novedades',this)">
+    <div class="c-bn-circle"></div>
+    <div class="c-bn-icon"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+    <span class="c-bn-label">Novedades</span>
+  </button>
+  <button class="c-bn-item" id="bn-alertas" onclick="cbnNav('alertas','Alertas',this)">
+    <div class="c-bn-circle"></div>
+    <div class="c-bn-icon"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div>
+    <span class="c-bn-label">Alertas</span>
+  </button>
+</nav>
 
-  <script src="../assets/js/api.js"></script>
-  <script src="../assets/js/notificacion.js"></script>
-  <script src="../assets/js/conductor.js"></script>
-  <script>
-    function cbnNav(id, title, el) {
-      document.querySelectorAll('.c-bn-item').forEach(b => b.classList.remove('active'));
-      el.classList.add('active');
-      showPage(id, title);
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      document.getElementById('nav-' + id)?.classList.add('active');
-    }
-    document.addEventListener('DOMContentLoaded', function () {
-      document.addEventListener('click', function (e) {
-        const w = document.querySelector('.c-avatar-wrap');
-        if (w && !w.contains(e.target)) w.classList.remove('open');
-      });
-    });
-  </script>
+<div id="toast" class="toast"></div>
+
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/notificacion.js"></script>
+<script src="../assets/js/conductor.js"></script>
+<script>
+// ── Bottom nav ──────────────────────────────────────────────────────────
+function cbnNav(id, title, el) {
+  showPage(id, title);
+}
+
+// ── Close avatar on outside click ────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+  document.addEventListener('click', function (e) {
+    const w = document.querySelector('.c-avatar-wrap');
+    if (w && !w.contains(e.target)) w.classList.remove('open');
+  });
+});
+
+// ── Contador de caracteres textarea ──────────────────────────────────────
+// (manejado por conductor.js)
+</script>
 </body>
-
 </html>

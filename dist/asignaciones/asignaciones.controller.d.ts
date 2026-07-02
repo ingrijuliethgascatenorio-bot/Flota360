@@ -9,6 +9,7 @@ export declare class AsignacionesController {
     porVehiculo(id: number): Promise<import("./asignacion_conductor.entity").AsignacionConductor[]>;
     historial(id: number): Promise<import("./asignacion_conductor.entity").AsignacionConductor[]>;
     porConductor(id: number): Promise<import("./asignacion_conductor.entity").AsignacionConductor[]>;
+    todasPorConductor(id: number): Promise<import("./asignacion_conductor.entity").AsignacionConductor[]>;
     desactivar(id: number): Promise<import("./asignacion_conductor.entity").AsignacionConductor>;
     buscarPorId(id: number): Promise<import("./asignacion_conductor.entity").AsignacionConductor>;
     actualizar(id: number, dto: UpdateAsignacionDto): Promise<import("./asignacion_conductor.entity").AsignacionConductor>;

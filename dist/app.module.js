@@ -27,6 +27,7 @@ const reportes_module_1 = require("./reportes/reportes.module");
 const dashboard_module_1 = require("./dashboard/dashboard.module");
 const prediccion_module_1 = require("./prediccion/prediccion.module");
 const salud_financiera_module_1 = require("./salud-financiera/salud-financiera.module");
+const novedades_module_1 = require("./novedades/novedades.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -72,6 +73,7 @@ exports.AppModule = AppModule = __decorate([
             reportes_module_1.ReportesModule,
             prediccion_module_1.PrediccionModule,
             salud_financiera_module_1.SaludFinancieraModule,
+            novedades_module_1.NovedadesModule,
             dashboard_module_1.DashboardModule,
         ],
     })

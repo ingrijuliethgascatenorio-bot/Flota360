@@ -20,15 +20,21 @@ let vehCondCache   = [];
   cargarHistorial();
 })();
 
-// ── Navegación ────────────────────────────────────
 function showPage(id, title) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById(`page-${id}`)?.classList.add('active');
   document.getElementById(`nav-${id}`)?.classList.add('active');
+  
+  // Sincronizar navegación móvil inferior
+  document.querySelectorAll('.c-bottom-nav .c-bn-item').forEach(b => b.classList.remove('active'));
+  document.getElementById(`bn-${id}`)?.classList.add('active');
+
   document.getElementById('page-title').textContent = title;
   if (id === 'historial') cargarHistorial();
-  if (id === 'vehiculos')  cargarVehiculos();
+  if (id === 'vehiculos') cargarVehiculos();
+  if (id === 'alertas') cargarAlertasFull();
+  if (id === 'novedades') setTimeout(initNovedadesPage, 100);
 }
 
 // ══════════════════════════════════════════════════
@@ -39,26 +45,38 @@ async function cargarVehiculos() {
     const res = await api('GET', `/conductores/${usuario.id}/asignaciones`);
     const asignaciones = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
 
-    // Deduplicar vehículos
+    // Guardar asignaciones completas (con turno) para uso posterior
+    // y deduplicar vehículos para la grilla
     const vistos = new Set();
     vehCondCache = [];
+    // asignCache: mapa vehiculoId -> asignacion (para acceder al turno)
+    window._asignHoyMap = {};
     for (const a of asignaciones) {
-      if (a.vehiculo && !vistos.has(a.vehiculo.id)) {
-        vistos.add(a.vehiculo.id);
-        vehCondCache.push(a.vehiculo);
+      if (a.vehiculo) {
+        window._asignHoyMap[a.vehiculo.id] = a; // turno disponible en a.turno
+        if (!vistos.has(a.vehiculo.id)) {
+          vistos.add(a.vehiculo.id);
+          vehCondCache.push(a.vehiculo);
+        }
       }
     }
 
     document.getElementById('stat-vehs').textContent = vehCondCache.length;
+    document.getElementById('stat-vehs-sub').textContent = vehCondCache.length > 0 ? 'Listos para conducir' : 'Sin asignaciones hoy';
 
-    // Poblar select del formulario unificado
+    // Poblar select: muestra placa + turno del día
     const sel = document.getElementById('km-vehiculo');
     sel.innerHTML = '<option value="">— Seleccione un vehículo —</option>' +
-      vehCondCache.map(v =>
-        `<option value="${v.id}" data-km="${v.kmActual}" data-nombre="${v.placa} — ${v.marca} ${v.modelo}">
-          ${v.placa} — ${v.marca} ${v.modelo}
-        </option>`
-      ).join('');
+      vehCondCache.map(v => {
+        const asig   = window._asignHoyMap[v.id];
+        const turno  = asig?.turno ?? '';
+        const meta   = TURNO_META[turno];
+        const label  = meta ? ` (${meta.label})` : '';
+        const nombre = `${v.placa} — ${v.marca} ${v.modelo}`;
+        return `<option value="${v.id}" data-km="${v.kmActual}" data-nombre="${nombre}" data-turno="${turno}">
+          ${nombre}${label}
+        </option>`;
+      }).join('');
 
     // Poblar select de historial
     const selH = document.getElementById('hist-vehiculo');
@@ -153,8 +171,26 @@ function onVehiculoChange() {
   inp.placeholder = `Mín. ${fmt(kmActual)} km`;
   inp.value       = '';
 
+  // Mostrar badge de turno inmediatamente con los datos ya cargados
+  const turnoLocal = opt.getAttribute('data-turno') || 'sin_asignacion';
+  mostrarTurnoBadge(turnoLocal);
+
   const momento = document.getElementById('km-momento').value;
   consultarTurnoYKm(sel.value, kmActual, momento);
+}
+
+// ── Badge de turno desde datos locales (sin llamada API) ──────────────────
+function mostrarTurnoBadge(turno) {
+  const meta    = TURNO_META[turno] || TURNO_META['sin_asignacion'];
+  const card    = document.getElementById('turno-info-card');
+  const iconEl  = document.getElementById('turno-icon');
+  const nomEl   = document.getElementById('turno-nombre');
+  const horaEl  = document.getElementById('turno-hora');
+  iconEl.textContent  = meta.icon;
+  nomEl.textContent   = meta.label;
+  horaEl.textContent  = meta.hora;
+  card.className      = `turno-badge-card ${meta.css}`;
+  card.style.display  = 'flex';
 }
 
 // ── REGLA 4: turno y km encadenado ───────────────
@@ -284,40 +320,21 @@ async function cargarHistorial() {
   if (tb) tb.innerHTML = '<tr><td colspan="4" class="td-loading">Cargando historial…</td></tr>';
 
   try {
-    if (!vehCondCache.length) {
-      const res2 = await api('GET', `/conductores/${usuario.id}/asignaciones`);
-      const asigs = Array.isArray(res2) ? res2 : (Array.isArray(res2?.data) ? res2.data : []);
-      const vistos = new Set();
-      for (const a of asigs) {
-        if (a.vehiculo && !vistos.has(a.vehiculo.id)) {
-          vistos.add(a.vehiculo.id);
-          vehCondCache.push(a.vehiculo);
-        }
-      }
-    }
+    const res = await api('GET', `/conductores/${usuario.id}/kilometraje`);
+    const registros = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+    
+    historialCache = registros.map(r => ({
+      ...r,
+      vehPlaca: r.vehPlaca ?? r.vehiculo?.placa ?? '—',
+      vehMarca: r.vehMarca ?? r.vehiculo?.marca ?? '',
+      _vehId: r.vehiculo?.id
+    }));
 
-    if (!vehCondCache.length) {
-      if (tb) tb.innerHTML = '<tr><td colspan="4" class="td-loading">No tienes vehículos asignados</td></tr>';
-      return;
-    }
-
-    const resultados = await Promise.allSettled(
-      vehCondCache.map(v =>
-        api('GET', `/vehiculos/${v.id}/kilometraje`)
-          .then(res => {
-            const items = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
-            return items.map(r => ({ ...r, vehPlaca: v.placa, vehMarca: v.marca, _vehId: v.id }));
-          })
-      )
-    );
-
-    let todos = [];
-    resultados.forEach(r => { if (r.status === 'fulfilled') todos = [...todos, ...r.value]; });
-    todos.sort((a, b) => new Date(b.registradoEn) - new Date(a.registradoEn));
-    historialCache = todos;
+    historialCache.sort((a, b) => new Date(b.registradoEn) - new Date(a.registradoEn));
 
     actualizarStatsHoy();
     renderHistorial(historialCache);
+    renderHistorialMobile(historialCache);
   } catch (err) {
     if (tb) tb.innerHTML = `<tr><td colspan="4" class="td-loading" style="color:var(--red)">Error: ${err.message}</td></tr>`;
   }
@@ -336,18 +353,42 @@ function actualizarStatsHoy() {
 
   document.getElementById('stat-hoy').textContent = deHoy.length;
 
+  const sortedDeHoy = [...deHoy].sort((a, b) => new Date(a.registradoEn) - new Date(b.registradoEn));
+  const ultimoMomento = sortedDeHoy[sortedDeHoy.length - 1]?.momento;
+  const subHoy = ultimoMomento === 'inicio' ? 'Turno en progreso' : (ultimoMomento === 'fin' ? 'Turno finalizado' : 'Inicia tu turno');
+  document.getElementById('stat-hoy-sub').textContent = subHoy;
+
   let kmHoy = 0;
-  const porVehiculo = {};
+  const vehMap = {};
   deHoy.forEach(r => {
     const vid = r.vehiculo?.id ?? r._vehId;
-    if (!porVehiculo[vid]) porVehiculo[vid] = {};
-    porVehiculo[vid][r.momento] = r.kmValor;
+    if (vid) {
+      if (!vehMap[vid]) vehMap[vid] = [];
+      vehMap[vid].push(r);
+    }
   });
-  Object.values(porVehiculo).forEach(v => {
-    if (v.fin !== undefined && v.inicio !== undefined) kmHoy += v.fin - v.inicio;
+
+  Object.values(vehMap).forEach(regs => {
+    regs.sort((a, b) => new Date(a.registradoEn) - new Date(b.registradoEn));
+    for (let i = 0; i < regs.length; i++) {
+      if (regs[i].momento === 'inicio') {
+        for (let j = i + 1; j < regs.length; j++) {
+          if (regs[j].momento === 'fin') {
+            const diff = regs[j].kmValor - regs[i].kmValor;
+            if (diff > 0) {
+              kmHoy += diff;
+            }
+            i = j;
+            break;
+          }
+        }
+      }
+    }
   });
 
   document.getElementById('stat-km').textContent = kmHoy > 0 ? fmt(kmHoy) : (deHoy.length > 0 ? '—' : '0');
+  const subKm = kmHoy > 0 ? 'Diferencia registrada' : (ultimoMomento === 'inicio' ? 'Registra fin al terminar' : 'Inicia tu turno');
+  document.getElementById('stat-km-sub').textContent = subKm;
 }
 
 // ── Paginación historial ──────────────────────────
@@ -459,4 +500,585 @@ function fmtFechaHora(str) {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit'
   });
+}
+
+// ══════════════════════════════════════════════════
+// ALERTAS (Asignaciones y Turnos)
+// ══════════════════════════════════════════════════
+let alertasCondCache = [];
+let alertasCondListaActual = [];
+let alertasCondPagActual = 1;
+const ALERTAS_COND_PER_PAGE = 10;
+
+async function cargarAlertasFull() {
+  const c = document.getElementById('alertas-full');
+  if (!c) return;
+  c.innerHTML = '<div class="td-loading">Cargando alertas…</div>';
+  document.getElementById('c-alertas-pagination').innerHTML = '';
+
+  try {
+    const res = await api('GET', `/conductores/${usuario.id}/asignaciones/todas`);
+    const asignaciones = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+
+    let alertas = [];
+    asignaciones.forEach(a => {
+      const v = a.vehiculo || {};
+      const t = a.turno || 'sin_asignacion';
+      const metaT = TURNO_META[t] || TURNO_META['sin_asignacion'];
+      
+      alertas.push({
+        id: a.id || Math.random(),
+        tipoAlerta: 'asignacion',
+        mensaje: `Se te ha asignado el vehículo ${v.placa || 'N/D'} para el turno: ${metaT.label}`,
+        placa: v.placa,
+        generadaEn: a.createdAt || a.fechaInicio || new Date().toISOString(),
+        turno: metaT.label,
+        vehiculoId: v.id
+      });
+    });
+
+    alertas.sort((a, b) => new Date(b.generadaEn) - new Date(a.generadaEn));
+    alertasCondCache = alertas;
+    
+    // Reset filters
+    document.getElementById('search-alertas-cond').value = '';
+    document.getElementById('fecha-alertas-cond').value = '';
+
+    renderAlertasCond(alertasCondCache);
+  } catch (err) {
+    c.innerHTML = `<div class="td-loading" style="color:var(--red)">Error: ${err.message}</div>`;
+  }
+}
+
+function filtrarAlertasCond() {
+  const q = document.getElementById('search-alertas-cond').value.toLowerCase();
+  const fecha = document.getElementById('fecha-alertas-cond').value;
+  
+  let lista = alertasCondCache;
+  
+  if (q) {
+    lista = lista.filter(a => 
+      (a.placa || '').toLowerCase().includes(q) || 
+      (a.turno || '').toLowerCase().includes(q)
+    );
+  }
+  
+  if (fecha) {
+    lista = lista.filter(a => {
+      if (!a.generadaEn) return false;
+      const d = new Date(a.generadaEn);
+      const s = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      return s === fecha;
+    });
+  }
+  
+  renderAlertasCond(lista);
+}
+
+function renderAlertasCond(lista) {
+  alertasCondListaActual = lista;
+  alertasCondPagActual = 1;
+  _renderAlertasCondPag();
+}
+
+function _renderAlertasCondPag() {
+  const c = document.getElementById('alertas-full');
+  const pag = document.getElementById('c-alertas-pagination');
+  if (!c) return;
+
+  const total = alertasCondListaActual.length;
+  if (!total) {
+    c.innerHTML = `
+      <div style="text-align:center; padding:48px 20px; color:#888; font-size:14px;">
+        <div style="font-size:48px; margin-bottom:12px; color:var(--slate-300)"><svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M5 13l4 4L19 7"/></svg></div>
+        <div style="font-weight:700; color:var(--navy); font-size:16px; margin-bottom:4px;">Sin alertas</div>
+        No hay alertas que coincidan con la búsqueda.
+      </div>`;
+    pag.innerHTML = '';
+    return;
+  }
+
+  const pages = Math.max(1, Math.ceil(total / ALERTAS_COND_PER_PAGE));
+  alertasCondPagActual = Math.min(Math.max(1, alertasCondPagActual), pages);
+
+  const desde = (alertasCondPagActual - 1) * ALERTAS_COND_PER_PAGE;
+  const pagina = alertasCondListaActual.slice(desde, desde + ALERTAS_COND_PER_PAGE);
+
+  c.innerHTML = `<div class="ai-feed-list">${pagina.map(a => _renderAlertaFeedCond(a)).join('')}</div>`;
+
+  if (pages <= 1) {
+    pag.innerHTML = '';
+    return;
+  }
+
+  const nums = _pagNums(alertasCondPagActual, pages);
+  const btns = nums.map(n => {
+    if (n === '…') return `<span class="c-pag-dots">…</span>`;
+    return `<button class="c-pag-btn${n === alertasCondPagActual ? ' active' : ''}"
+      onclick="alertasCondPagActual=${n};_renderAlertasCondPag()">${n}</button>`;
+  }).join('');
+
+  const hasta = Math.min(alertasCondPagActual * ALERTAS_COND_PER_PAGE, total);
+  
+  pag.innerHTML = `
+    <div class="c-pagination" style="border-top: 1px solid var(--slate-100); padding: 14px 20px;">
+      <div class="c-pag-inner">
+        <button class="c-pag-btn" onclick="alertasCondPagActual--;_renderAlertasCondPag()" ${alertasCondPagActual===1?'disabled':''}>‹</button>
+        ${btns}
+        <button class="c-pag-btn" onclick="alertasCondPagActual++;_renderAlertasCondPag()" ${alertasCondPagActual===pages?'disabled':''}>›</button>
+        <span class="c-pag-info">${desde + 1}–${hasta} de ${total}</span>
+      </div>
+    </div>`;
+}
+
+function _renderAlertaFeedCond(a) {
+  return `
+  <div style="display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--slate-100); cursor: pointer; transition: background 0.2s; background: #fff;" onmouseover="this.style.background='var(--slate-50)'" onmouseout="this.style.background='#fff'" onclick="if(document.querySelector('.c-bn-item')) { cbnNav('km', 'Registrar kilómetros', document.getElementById('bn-km')); } else { showPage('km', 'Registrar kilómetros'); }">
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <div style="color: #1a56db; background: #e8f0fe; font-size: 18px; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;">
+        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+           <path d="M5 17H3a2 2 0 01-2-2V7a2 2 0 012-2h13l4 4v6a2 2 0 01-2 2h-2" />
+           <circle cx="8.5" cy="17.5" r="2.5" />
+           <circle cx="17.5" cy="17.5" r="2.5" />
+        </svg>
+      </div>
+      <div>
+        <div style="font-weight: 600; font-size: 15px; color: var(--navy); line-height: 1.3;">${a.mensaje}</div>
+        <div style="font-size: 13px; color: var(--text-lt); margin-top: 4px; display: flex; gap: 8px; align-items: center;">
+          <span>${a.placa || 'N/D'}</span>
+          <span style="color: var(--slate-300)">•</span>
+          <span>${fmtFechaHora(a.generadaEn)}</span>
+        </div>
+      </div>
+    </div>
+    <div style="text-align: right; flex-shrink: 0;">
+      <span style="font-size: 11px; font-weight: 700; color: #1a56db; background: #e8f0fe; padding: 5px 12px; border-radius: 99px; white-space: nowrap;">Asignación</span>
+    </div>
+  </div>`;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MÓDULO NOVEDADES — Conductor
+// Integrado directamente en conductor.js siguiendo el mismo patrón del módulo
+// de kilometraje y alertas ya existentes.
+// ══════════════════════════════════════════════════════════════════════════════
+
+let _misNovedadesCache = [];
+
+// showPage ya maneja 'novedades' directamente en su definición original arriba.
+
+// ── Inicializar sección novedades ──────────────────────────────────────────────
+function initNovedadesPage() {
+  // Ocultar resultado anterior si quedó visible
+  const res = document.getElementById('nov-result');
+  if (res) res.style.display = 'none';
+  // Limpiar el formulario
+  const form = document.getElementById('form-novedad');
+  if (form) form.reset();
+  const cc = document.getElementById('nov-char-count');
+  if (cc) cc.textContent = '0';
+  // Cargar historial
+  cargarMisNovedades();
+  // Cargar tarjeta del vehículo asignado
+  if (!vehCondCache.length) {
+    cargarVehiculos().then(cargarVehiculoAsignadoNovedad);
+  } else {
+    cargarVehiculoAsignadoNovedad();
+  }
+}
+
+// ── Tarjeta "Bus asignado" ───────────────────────────────────────────────────
+function cargarVehiculoAsignadoNovedad() {
+  const card = document.getElementById('nov-veh-card');
+  if (!card) return;
+
+  if (!vehCondCache.length) {
+    card.style.display = 'none';
+    return;
+  }
+
+  const v = vehCondCache[0];
+
+  document.getElementById('nov-veh-placa').textContent  = v.placa ?? '—';
+
+  const partes = [v.marca, v.modelo].filter(Boolean).join(' ');
+  document.getElementById('nov-veh-modelo').textContent =
+    partes + (v.anio ? ` - ${v.anio}` : '');
+
+  const badge = document.getElementById('nov-veh-badge');
+  if (v.activo === false) {
+    badge.textContent = 'Inactivo';
+    badge.classList.add('inactivo');
+  } else {
+    badge.textContent = 'Activo';
+    badge.classList.remove('inactivo');
+  }
+
+  card.style.display = 'flex';
+}
+
+// ── Cancelar reporte ────────────────────────────────────────────────────────
+function cancelarNovedad() {
+  const form = document.getElementById('form-novedad');
+  if (form) form.reset();
+  const cc = document.getElementById('nov-char-count');
+  if (cc) cc.textContent = '0';
+  const res = document.getElementById('nov-result');
+  if (res) res.style.display = 'none';
+  showPage('km', 'Registrar kilómetros');
+}
+
+// ── Contador de caracteres ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+  const ta = document.getElementById('nov-descripcion');
+  const cc = document.getElementById('nov-char-count');
+  if (ta && cc) {
+    ta.addEventListener('input', () => { cc.textContent = ta.value.length; });
+  }
+
+  // Registrar submit del formulario de novedades
+  const form = document.getElementById('form-novedad');
+  if (form) form.addEventListener('submit', onSubmitNovedad);
+});
+
+// ── Enviar novedad ─────────────────────────────────────────────────────────────
+async function onSubmitNovedad(e) {
+  e.preventDefault();
+
+  const btn  = document.querySelector('#form-novedad button[type="submit"]');
+  const tipo = document.getElementById('nov-tipo')?.value ?? '';
+  const desc = (document.getElementById('nov-descripcion')?.value ?? '').trim();
+
+  if (!tipo || !desc) {
+    toast('Completa todos los campos antes de enviar', 'error');
+    return;
+  }
+
+  const origHTML = btn.innerHTML;
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+
+  try {
+    const res  = await api('POST', '/novedades', { tipoNovedad: tipo, descripcion: desc });
+    const data = res?.data ?? res;
+
+    // Mostrar tarjeta de resultado exitoso
+    const novResult = document.getElementById('nov-result');
+    if (novResult) {
+      document.getElementById('nov-result-tipo').textContent  = data.tipoNovedad ?? tipo;
+      document.getElementById('nov-result-placa').textContent = data.vehiculo?.placa ?? '—';
+      document.getElementById('nov-result-fecha').textContent =
+        data.fechaReporte ? new Date(data.fechaReporte).toLocaleString('es-CO') : '';
+      novResult.style.display = 'block';
+    }
+
+    // Limpiar formulario
+    document.getElementById('form-novedad').reset();
+    const cc = document.getElementById('nov-char-count');
+    if (cc) cc.textContent = '0';
+
+    toast('Novedad reportada correctamente', 'success');
+    cargarMisNovedades();
+
+    // Ocultar resultado después de 6 segundos
+    setTimeout(() => {
+      const r = document.getElementById('nov-result');
+      if (r) r.style.display = 'none';
+    }, 6000);
+
+  } catch (err) {
+    // Mostrar mensaje de error amigable
+    const msg = err?.message ?? 'Error al reportar la novedad';
+    if (msg.toLowerCase().includes('asignado') || msg.toLowerCase().includes('asignaci')) {
+      toast('No tienes vehículos asignados para hoy. Contacta al administrador.', 'error');
+    } else {
+      toast(msg, 'error');
+    }
+  } finally {
+    btn.disabled  = false;
+    btn.innerHTML = origHTML;
+  }
+}
+
+// ── Cargar historial de novedades del conductor ────────────────────────────────
+async function cargarMisNovedades() {
+  const tbody = document.getElementById('tb-novedades');
+  if (!tbody) return;
+  tbody.innerHTML = '<tr><td colspan="5" class="td-loading">Cargando…</td></tr>';
+
+  try {
+    const res = await api('GET', '/novedades/mias');
+    _misNovedadesCache = res?.data ?? res ?? [];
+    // Resetear filtros visuales sin perder valores
+    filtrarMisNovedades();
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5" class="td-loading" style="color:var(--red)">Error: ${err.message}</td></tr>`;
+  }
+}
+
+// ── Filtrar novedades en cliente ───────────────────────────────────────────────
+function filtrarMisNovedades() {
+  const q      = (document.getElementById('search-nov')?.value ?? '').toLowerCase();
+  const estado = document.getElementById('filtro-nov-estado')?.value ?? '';
+
+  const filtrado = _misNovedadesCache.filter(n =>
+    (!estado || n.estado === estado) &&
+    (!q ||
+      (n.tipoNovedad ?? '').toLowerCase().includes(q) ||
+      (n.vehiculo?.placa ?? '').toLowerCase().includes(q) ||
+      (n.descripcion ?? '').toLowerCase().includes(q))
+  );
+  renderMisNovedades(filtrado);
+}
+
+// ── Render tabla de novedades ──────────────────────────────────────────────────
+function renderMisNovedades(lista) {
+  const tbody = document.getElementById('tb-novedades');
+  if (!tbody) return;
+
+  if (!lista.length) {
+    tbody.innerHTML = '<tr><td colspan="5" class="td-loading">Sin novedades registradas</td></tr>';
+    return;
+  }
+
+  // Estilos de badge por estado — inline para no depender de CSS externo
+  const badgeStyle = {
+    Pendiente: 'background:#fef3c7;color:#92400e;border:1px solid #fbbf24',
+    Aprobada:  'background:#dcfce7;color:#166534;border:1px solid #4ade80',
+    Rechazada: 'background:#fee2e2;color:#991b1b;border:1px solid #f87171',
+  };
+
+  tbody.innerHTML = lista.map(n => {
+    const bs  = badgeStyle[n.estado] ?? '';
+    const ot  = n.ordenTrabajo
+      ? `<span style="background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd;padding:2px 8px;border-radius:20px;font-size:12px;font-weight:700">OT #${n.ordenTrabajo.id}</span>`
+      : '<span style="color:var(--text-lt)">—</span>';
+    const fecha = n.fechaReporte
+      ? new Date(n.fechaReporte).toLocaleString('es-CO', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
+      : '—';
+
+    return `<tr>
+      <td data-label="Fecha">${fecha}</td>
+      <td data-label="Vehículo"><strong>${n.vehiculo?.placa ?? '—'}</strong></td>
+      <td data-label="Tipo">${n.tipoNovedad}</td>
+      <td data-label="Estado"><span style="${bs};padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;display:inline-block">${n.estado}</span></td>
+      <td data-label="OT generada">${ot}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Utilidad: fmt ─────────────────────────────────────────────────────────────
+// fmt ya está definida en conductor.js original, pero si por alguna razón
+// este módulo se carga antes, definimos una versión de respaldo:
+if (typeof fmt === 'undefined') {
+  window.fmt = n => (n ?? 0).toLocaleString('es-CO');
+}
+// ══════════════════════════════════════════════════
+//  HISTORIAL MÓVIL — cards agrupadas por fecha
+// ══════════════════════════════════════════════════
+let histFiltroActivo   = 'todos';
+let histFechaPickerVal = null;
+
+function setFiltroHist(filtro, btn) {
+  histFiltroActivo   = filtro;
+  histFechaPickerVal = null;
+  document.querySelectorAll('.hist-pill').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  _aplicarFiltroMobile();
+}
+
+function abrirFiltroFecha() {
+  document.getElementById('hist-fecha-picker')?.click();
+}
+
+function setFiltroFechaPicker(val) {
+  histFechaPickerVal = val;
+  histFiltroActivo   = 'fecha';
+  document.querySelectorAll('.hist-pill').forEach(b => b.classList.remove('active'));
+  _aplicarFiltroMobile();
+}
+
+function filtrarHistorialMobile() {
+  _aplicarFiltroMobile();
+}
+
+function _aplicarFiltroMobile() {
+  const q     = (document.getElementById('search-hist-mobile')?.value ?? '').toLowerCase();
+  const ahora = new Date();
+
+  let lista = historialCache.filter(r => {
+    if (!r.registradoEn) return false;
+    const d = new Date(r.registradoEn);
+    if (histFiltroActivo === 'hoy')
+      return d.toDateString() === ahora.toDateString();
+    if (histFiltroActivo === 'semana') {
+      const lunes = new Date(ahora);
+      lunes.setDate(ahora.getDate() - ((ahora.getDay() + 6) % 7));
+      lunes.setHours(0, 0, 0, 0);
+      return d >= lunes;
+    }
+    if (histFiltroActivo === 'mes')
+      return d.getMonth() === ahora.getMonth() && d.getFullYear() === ahora.getFullYear();
+    if (histFiltroActivo === 'fecha' && histFechaPickerVal) {
+      const [y, m, dd] = histFechaPickerVal.split('-');
+      return d.getFullYear() === +y && d.getMonth() + 1 === +m && d.getDate() === +dd;
+    }
+    return true;
+  });
+
+  if (q) lista = lista.filter(r =>
+    (r.vehPlaca || '').toLowerCase().includes(q) ||
+    fmtFechaHora(r.registradoEn).toLowerCase().includes(q));
+
+  renderHistorialMobile(lista);
+}
+
+function _agruparEnTurnos(lista) {
+  const porVeh = {};
+  lista.forEach(r => {
+    const vid = String(r._vehId ?? r.vehiculo?.id ?? r.vehPlaca);
+    (porVeh[vid] = porVeh[vid] ?? []).push({ ...r });
+  });
+
+  const turnos = [];
+  Object.values(porVeh).forEach(regs => {
+    regs.sort((a, b) => new Date(a.registradoEn) - new Date(b.registradoEn));
+    let i = 0;
+    while (i < regs.length) {
+      if (regs[i].momento === 'inicio') {
+        const inicio = regs[i];
+        let fin = null;
+        // Buscar el fin más cercano posterior al inicio, sin restricción de día
+        for (let j = i + 1; j < regs.length; j++) {
+          if (regs[j].momento === 'fin' &&
+              new Date(regs[j].registradoEn) > new Date(inicio.registradoEn)) {
+            fin = regs.splice(j, 1)[0];
+            break;
+          }
+        }
+        turnos.push({ inicio, fin, vehPlaca: inicio.vehPlaca, vehMarca: inicio.vehMarca });
+      } else {
+        // Fin huérfano (sin inicio) — no mostrar
+        // regs[i] es un fin que no pudo emparejarse, se descarta
+      }
+      i++;
+    }
+  });
+
+  return turnos.sort((a, b) =>
+    new Date((b.inicio ?? b.fin).registradoEn) - new Date((a.inicio ?? a.fin).registradoEn));
+}
+
+function renderHistorialMobile(lista) {
+  const cont = document.getElementById('hist-cards-container');
+  if (!cont) return;
+
+  if (!lista.length) {
+    cont.innerHTML = '<div class="hist-loading">Sin registros de kilometraje</div>';
+    return;
+  }
+
+  const turnos = _agruparEnTurnos([...lista]);
+
+  const porFecha = {};
+  turnos.forEach(t => {
+    const d = new Date((t.inicio ?? t.fin).registradoEn);
+    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    (porFecha[k] = porFecha[k] ?? []).push(t);
+  });
+
+  cont.innerHTML = Object.keys(porFecha).sort((a, b) => b.localeCompare(a)).map(key => {
+    const [y, m, d] = key.split('-');
+    const label = new Date(+y, +m - 1, +d).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
+    return `
+      <div class="hist-fecha-grupo">
+        <div class="hist-fecha-hdr">
+          <span class="hist-fecha-label">${label}</span>
+          <svg viewBox="0 0 24 24" class="hist-fecha-ico"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        ${porFecha[key].map(_buildTurnoCard).join('')}
+      </div>`;
+  }).join('');
+}
+
+function _buildTurnoCard(t) {
+  const completo = t.inicio && t.fin;
+  const busIcon  = `<svg viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 01-2-2V7a2 2 0 012-2h13l4 4v6a2 2 0 01-2 2h-2"/><circle cx="8.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>`;
+  const checkIco = `<svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>`;
+  const fmtH = str => str ? new Date(str).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '—';
+  const fmtD = str => str ? new Date(str).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+
+  const filaInicio = t.inicio ? `
+    <div class="hist-turno-fila">
+      <div class="hist-turno-momento">
+        <div class="hist-momento-dot inicio"></div>
+        <div class="hist-momento-info">
+          <div class="hist-momento-label">Inicio</div>
+          <div class="hist-momento-fecha">${fmtD(t.inicio.registradoEn)}</div>
+          <div class="hist-momento-hora">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            ${fmtH(t.inicio.registradoEn)}
+          </div>
+        </div>
+      </div>
+      <div class="hist-turno-km">
+        <div class="hist-km-label">KM REGISTRADO</div>
+        <div class="hist-km-val">${fmt(t.inicio.kmValor)} km</div>
+      </div>
+    </div>` : '';
+
+  const filaFin = t.fin ? `
+    <div class="hist-turno-fila">
+      <div class="hist-turno-momento">
+        <div class="hist-momento-dot fin"></div>
+        <div class="hist-momento-info">
+          <div class="hist-momento-label">Fin</div>
+          <div class="hist-momento-fecha">${fmtD(t.fin.registradoEn)}</div>
+          <div class="hist-momento-hora">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            ${fmtH(t.fin.registradoEn)}
+          </div>
+        </div>
+      </div>
+      <div class="hist-turno-km">
+        <div class="hist-km-label">KM REGISTRADO</div>
+        <div class="hist-km-val">${fmt(t.fin.kmValor)} km</div>
+      </div>
+    </div>` : `
+    <div class="hist-turno-fila">
+      <div class="hist-turno-momento">
+        <div class="hist-momento-dot fin pendiente"></div>
+        <div class="hist-momento-info">
+          <div class="hist-momento-label">Fin</div>
+          <div class="hist-momento-fecha hist-pendiente-txt">Pendiente de registro</div>
+          <div class="hist-momento-hora hist-pendiente-txt">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>—
+          </div>
+        </div>
+      </div>
+      <div class="hist-turno-km">
+        <div class="hist-km-label">KM REGISTRADO</div>
+        <div class="hist-km-val hist-pendiente-txt">—</div>
+      </div>
+    </div>`;
+
+  return `
+    <div class="hist-turno-card">
+      <div class="hist-card-header">
+        <div class="hist-card-veh-icon">${busIcon}</div>
+        <div class="hist-card-veh-info">
+          <div class="hist-card-placa">${t.vehPlaca}</div>
+          <div class="hist-card-marca">${t.vehMarca}</div>
+        </div>
+        <span class="hist-status-badge ${completo ? 'completado' : 'en-progreso'}">
+          ${completo ? 'Turno completado' : 'En progreso'}
+          ${completo ? checkIco : ''}
+        </span>
+      </div>
+      <div class="hist-turno-body">
+        <div class="hist-turno-linea-lateral"></div>
+        <div class="hist-turno-filas">${filaInicio}${filaFin}</div>
+      </div>
+      ${completo ? `<div class="hist-card-footer">${checkIco} Registrado correctamente</div>` : ''}
+    </div>`;
 }

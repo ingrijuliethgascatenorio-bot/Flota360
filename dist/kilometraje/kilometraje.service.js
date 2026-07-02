@@ -80,14 +80,14 @@ let KilometrajeService = class KilometrajeService {
     }
     async finalizarAsignacionActiva(vehiculoId, conductorId) {
         const hoy = new Date().toISOString().split('T')[0];
-        const asignacion = await this.asignRepo.findOne({
-            where: {
-                vehiculo: { id: vehiculoId },
-                conductor: { id: conductorId },
-                fechaInicio: hoy,
-                activo: true
-            }
-        });
+        const asignacion = await this.asignRepo
+            .createQueryBuilder('a')
+            .where('a.vehiculo_id = :vehiculoId', { vehiculoId })
+            .andWhere('a.conductor_id = :conductorId', { conductorId })
+            .andWhere('a.activo = true')
+            .andWhere('a.fecha_inicio <= :hoy', { hoy })
+            .andWhere('(a.fecha_fin >= :hoy OR a.fecha_fin IS NULL)', { hoy })
+            .getOne();
         if (asignacion) {
             asignacion.activo = false;
             asignacion.fechaFin = asignacion.fechaFin ?? hoy;
@@ -99,6 +99,13 @@ let KilometrajeService = class KilometrajeService {
             where: { vehiculo: { id: vehiculoId } },
             order: { registradoEn: 'DESC' },
             take: 50,
+        });
+    }
+    async historialConductor(conductorId) {
+        return this.repo.find({
+            where: { conductor: { id: conductorId } },
+            relations: ['vehiculo'],
+            order: { registradoEn: 'DESC' },
         });
     }
     async kmInicioEncadenado(vehiculoId, conductorId) {
@@ -157,6 +164,70 @@ let KilometrajeService = class KilometrajeService {
             turno,
             mensaje: `Km encadenado desde el FIN del turno ${anterior}: ${registroFin.kmValor} km.`,
         };
+    }
+    async turnosPendientes(conductorId) {
+        return this.repo
+            .createQueryBuilder('r_ini')
+            .leftJoinAndSelect('r_ini.vehiculo', 'v')
+            .leftJoin(registro_km_entity_1.RegistroKm, 'r_fin', `r_fin.vehiculo_id = r_ini.vehiculo_id
+         AND r_fin.conductor_id = r_ini.conductor_id
+         AND r_fin.momento = 'fin'
+         AND DATE(r_fin.registrado_en AT TIME ZONE 'America/Bogota') = DATE(r_ini.registrado_en AT TIME ZONE 'America/Bogota')`)
+            .where('r_ini.conductor_id = :cid', { cid: conductorId })
+            .andWhere('r_ini.momento = :m', { m: registro_km_entity_1.MomentoKm.INICIO })
+            .andWhere('r_fin.id IS NULL')
+            .orderBy('r_ini.registrado_en', 'DESC')
+            .select([
+            'r_ini.id            AS "registroInicioId"',
+            'r_ini.km_valor      AS "kmInicio"',
+            'r_ini.registrado_en AS "fecha"',
+            'v.id                AS "vehiculoId"',
+            'v.placa             AS "placa"',
+            'v.marca             AS "marca"',
+        ])
+            .getRawMany();
+    }
+    async cerrarTurnoPendiente(conductorId, registroInicioId, dto) {
+        const regInicio = await this.repo.findOne({
+            where: {
+                id: registroInicioId,
+                conductor: { id: conductorId },
+                momento: registro_km_entity_1.MomentoKm.INICIO,
+            },
+            relations: ['vehiculo'],
+        });
+        if (!regInicio) {
+            throw new common_1.NotFoundException('Registro de inicio no encontrado o no te pertenece');
+        }
+        const fechaDia = new Date(regInicio.registradoEn)
+            .toISOString()
+            .split('T')[0];
+        const yaExisteFin = await this.repo
+            .createQueryBuilder('r')
+            .where('r.conductor_id = :cid', { cid: conductorId })
+            .andWhere('r.vehiculo_id = :vid', { vid: regInicio.vehiculo.id })
+            .andWhere('r.momento = :m', { m: registro_km_entity_1.MomentoKm.FIN })
+            .andWhere(`DATE(r.registrado_en AT TIME ZONE 'America/Bogota') = :fecha`, { fecha: fechaDia })
+            .getOne();
+        if (yaExisteFin) {
+            throw new common_1.BadRequestException('Este turno ya tiene km fin registrado');
+        }
+        if (dto.kmFin < regInicio.kmValor) {
+            throw new common_1.BadRequestException(`El km fin (${dto.kmFin}) no puede ser menor al km inicio (${regInicio.kmValor})`);
+        }
+        const regFin = this.repo.create({
+            vehiculo: regInicio.vehiculo,
+            conductor: { id: conductorId },
+            kmValor: dto.kmFin,
+            momento: registro_km_entity_1.MomentoKm.FIN,
+        });
+        await this.repo.save(regFin);
+        await this.vehiculosService.actualizar(regInicio.vehiculo.id, {
+            kmActual: dto.kmFin,
+        });
+        const resPred = await this.prediccionService.calcularPrediccion(regInicio.vehiculo.id);
+        await this.planesService.recalcularPrediccion(regInicio.vehiculo.id, resPred.kmPorDia);
+        return regFin;
     }
     async calcularKmPorDia(vehiculoId) {
         return this.prediccionService.calcularKmDia(vehiculoId);

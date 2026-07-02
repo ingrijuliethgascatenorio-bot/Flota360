@@ -555,9 +555,12 @@ const FC_ADMIN_PANEL = {
       if (!this.items.find(i => i.id === item.id)) {
         // Si ya fue marcado como leído antes, respetarlo
         if (readIds.has(String(item.id))) item.unread = false;
-        this.items.unshift(item);
+        this.items.push(item);
       }
     });
+
+    // Ordenar por fecha descendente (más recientes primero)
+    this.items.sort((a, b) => new Date(b._date).getTime() - new Date(a._date).getTime());
 
     const unreadCount = this.items.filter(i => i.unread).length;
     const badge = document.getElementById('fc-bell-count');
@@ -673,6 +676,12 @@ const FC_ADMIN_PANEL = {
       </div>`;
     }
 
+    html += `<div class="fc-np-footer">
+      <div class="fc-np-see-all" onclick="event.stopPropagation();FC_ADMIN_PANEL._irASeccionAlertas()">
+        Ver todas las alertas
+      </div>
+    </div>`;
+
     panel.innerHTML = html;
 
     // Scroll suave al fondo si se acaba de expandir
@@ -687,6 +696,13 @@ const FC_ADMIN_PANEL = {
     this._verMas += 10;
     this._scrollDown = true;
     this.render();
+  },
+
+  _irASeccionAlertas() {
+    this.close();
+    if (typeof showPage === 'function') {
+      showPage('alertas', 'Alertas');
+    }
   },
 
   _clickItem(id) {
@@ -779,7 +795,7 @@ const FC_MOBILE_NOTIF = {
 /**
  * Convierte alertas del sistema al formato de notificación
  */
-function _alertaToNotifAdmin(alerta, placa) {
+function _alertaToNotifAdmin(alerta, placa, vehiculoId) {
   const tipo = alerta.tipoAlerta || '';
   const mapa = {
     mantenimiento_vencido: { icon:'<i class="fa-solid fa-wrench"></i>', type:'danger' },
@@ -799,7 +815,12 @@ function _alertaToNotifAdmin(alerta, placa) {
     time: _relTime(alerta.generadaEn),
     unread: !alerta.leida,
     _date: alerta.generadaEn,
-    onClick: () => { typeof showPage === 'function' && showPage('alertas', 'Alertas'); }
+    onClick: async () => { 
+      if (vehiculoId && !alerta.leida && typeof api === 'function') {
+        try { await api('PATCH', `/vehiculos/${vehiculoId}/alertas/${alerta.id}/leer`); } catch(e){}
+      }
+      typeof showPage === 'function' && showPage('alertas', 'Alertas'); 
+    }
   };
 }
 
@@ -847,15 +868,21 @@ function _relTime(iso) {
 
 /**
  * Llamar desde app.js después de cargar alertas para poblar el panel.
- * @param {Array} vehs  Array de vehículos con alertasDetalle
+ * @param {Array} items  Array de vehículos o array de alertas
  */
-function fcAdminLoadNotifications(vehs) {
+function fcAdminLoadNotifications(items) {
   const notifs = [];
-  (vehs || []).forEach(v => {
-    (v.alertasDetalle || v.alertas || []).forEach(a => {
-      notifs.push(_alertaToNotifAdmin(a, v.placa));
+  if (items && items.length > 0 && items[0].tipoAlerta) {
+    items.forEach(a => {
+      notifs.push(_alertaToNotifAdmin(a, a.placa, a.vehiculoId));
     });
-  });
+  } else {
+    (items || []).forEach(v => {
+      (v.alertasDetalle || v.alertas || []).forEach(a => {
+        notifs.push(_alertaToNotifAdmin(a, v.placa, v.vehiculoId || v.id));
+      });
+    });
+  }
   if (notifs.length) FC_ADMIN_PANEL.addItems(notifs);
 }
 

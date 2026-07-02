@@ -30,7 +30,7 @@ exports.KilometrajeModule = KilometrajeModule = __decorate([
             prediccion_module_1.PrediccionModule,
         ],
         providers: [kilometraje_service_1.KilometrajeService],
-        controllers: [kilometraje_controller_1.KilometrajeController],
+        controllers: [kilometraje_controller_1.KilometrajeController, kilometraje_controller_1.ConductorKilometrajeController],
         exports: [kilometraje_service_1.KilometrajeService],
     })
 ], KilometrajeModule);

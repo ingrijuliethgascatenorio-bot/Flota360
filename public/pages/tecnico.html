@@ -1,682 +1,450 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>FlotaControl 360 — Técnico</title>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap"
-    rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <link rel="stylesheet" href="../assets/css/style.css" />
-  <link rel="stylesheet" href="../assets/css/tecnico.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <link rel="stylesheet" href="../assets/css/style.css"/>
+  <link rel="stylesheet" href="../assets/css/tecnico.css"/>
 </head>
-
 <body>
 
-  <!-- ═══ TOP NAV ═══════════════════════════════════ -->
-  <nav class="t-topnav topbar">
-    <a class="t-brand" href="#">
-      <div class="t-brand-icon">
-        <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
-          <path d="M6 22 Q16 8 26 22" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round" />
-          <circle cx="16" cy="22" r="3" fill="white" />
-        </svg>
-      </div>
-      <div>
-        <div class="t-brand-name">FlotaControl</div>
-        <div class="t-brand-ver">360° Técnico</div>
-      </div>
-    </a>
-
-    <div class="t-nav-links">
-      <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard','Inicio')">
-        <span class="nav-icon"><svg viewBox="0 0 24 24">
-            <rect x="3" y="3" width="7" height="7" rx="1" />
-            <rect x="14" y="3" width="7" height="7" rx="1" />
-            <rect x="3" y="14" width="7" height="7" rx="1" />
-            <rect x="14" y="14" width="7" height="7" rx="1" />
-          </svg></span>
-        <span class="nav-label">Inicio</span>
-      </div>
-      <div class="nav-item" id="nav-ordenes" onclick="showPage('ordenes','Mis Órdenes')">
-        <span class="nav-icon"><svg viewBox="0 0 24 24">
-            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-            <path d="M14 2v6h6" />
-            <line x1="16" y1="13" x2="8" y2="13" />
-            <line x1="16" y1="17" x2="8" y2="17" />
-          </svg></span>
-        <span class="nav-label">Mis Órdenes</span>
-      </div>
-      <div class="nav-item" id="nav-vehiculos" onclick="showPage('vehiculos','Mis Reparaciones')">
-        <span class="nav-icon"><svg viewBox="0 0 24 24">
-            <path
-              d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
-          </svg></span>
-        <span class="nav-label">Mis Reparaciones</span>
-      </div>
-      <div class="nav-item" id="nav-alertas" onclick="showPage('alertas','Alertas')">
-        <span class="nav-icon"><svg viewBox="0 0 24 24">
-            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
-            <path d="M13.73 21a2 2 0 01-3.46 0" />
-          </svg></span>
-        <span class="nav-label">Alertas</span>
-      </div>
+<!-- ═══ TOP NAV ═══════════════════════════════════ -->
+<nav class="t-topnav topbar">
+  <a class="t-brand" href="#">
+    <div class="t-brand-icon">
+      <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
+        <path d="M6 22 Q16 8 26 22" stroke="white" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+        <circle cx="16" cy="22" r="3" fill="white"/>
+      </svg>
     </div>
+    <div>
+      <div class="t-brand-name">FlotaControl</div>
+      <div class="t-brand-ver">360° Técnico</div>
+    </div>
+  </a>
 
-    <div class="t-nav-right">
-      <!-- Campana — FC_ADMIN_PANEL.init() la llena -->
-      <div id="fc-bell-container-tec" style="display:flex;align-items:center;margin-right:4px">
-        <button id="fc-bell-btn" title="Notificaciones"
-          onclick="(function(e){e.stopPropagation();if(typeof FC_ADMIN_PANEL!=='undefined')FC_ADMIN_PANEL.toggle();})(event)">
-          🔔<span id="fc-bell-count"></span>
+  <div class="t-nav-links">
+    <div class="nav-item active" id="nav-dashboard" onclick="showPage('dashboard','Inicio')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24">
+        <rect x="3" y="3" width="7" height="7" rx="1"/>
+        <rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/>
+        <rect x="14" y="14" width="7" height="7" rx="1"/>
+      </svg></span>
+      <span class="nav-label">Inicio</span>
+    </div>
+    <div class="nav-item" id="nav-ordenes" onclick="showPage('ordenes','Mis Órdenes')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24">
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+        <path d="M14 2v6h6"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+      </svg></span>
+      <span class="nav-label">Mis Órdenes</span>
+    </div>
+    <div class="nav-item" id="nav-vehiculos" onclick="showPage('vehiculos','Mis Reparaciones')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24">
+        <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
+      </svg></span>
+      <span class="nav-label">Mis Reparaciones</span>
+    </div>
+    <div class="nav-item" id="nav-alertas" onclick="showPage('alertas','Alertas')">
+      <span class="nav-icon"><svg viewBox="0 0 24 24">
+        <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 01-3.46 0"/>
+      </svg></span>
+      <span class="nav-label">Alertas</span>
+    </div>
+  </div>
+
+  <div class="t-nav-right">
+    <div id="fc-bell-container-tec" style="display:flex;align-items:center;margin-right:4px">
+      <button id="fc-bell-btn" title="Notificaciones"
+        onclick="(function(e){e.stopPropagation();if(typeof FC_ADMIN_PANEL!=='undefined')FC_ADMIN_PANEL.toggle();})(event)">
+        <i class="fa-solid fa-bell"></i><span id="fc-bell-count"></span>
+      </button>
+    </div>
+    <div id="fc-notif-panel"></div>
+
+    <div class="t-avatar-wrap" onclick="this.classList.toggle('open')">
+      <div class="t-avatar" id="av" style="display:none"></div>
+      <div class="t-avatar" id="av2">T</div>
+      <div class="t-user-info">
+        <span class="t-user-name" id="u-name">—</span>
+        <span class="t-rol-badge">Técnico</span>
+      </div>
+      <svg class="t-caret" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+      <div class="t-dropdown">
+        <div class="t-dd-header">
+          <div class="t-dd-avatar" id="av3">T</div>
+          <div>
+            <div class="t-dd-name" id="u-name-dd">—</div>
+            <div class="t-dd-role">Técnico</div>
+          </div>
+        </div>
+        <div class="t-dd-sep"></div>
+        <button class="t-dd-item danger" onclick="logout()">
+          <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          Cerrar sesión
         </button>
       </div>
-      <!-- Panel notificaciones -->
-      <div id="fc-notif-panel"></div>
+    </div>
+  </div>
+</nav>
 
-      <!-- Avatar dropdown -->
-      <div class="t-avatar-wrap" onclick="this.classList.toggle('open')">
-        <div class="t-avatar" id="av" style="display:none"></div>
-        <div class="t-avatar" id="av2">T</div>
-        <div class="t-user-info">
-          <span class="t-user-name" id="u-name">—</span>
-          <span class="t-rol-badge">Técnico</span>
+<!-- ═══ MAIN ══════════════════════════════════════ -->
+<main class="t-main">
+  <div id="page-title" style="display:none"></div>
+
+  <!-- ██  DASHBOARD  ██ -->
+  <section id="page-dashboard" class="page active">
+    <div class="t-page-hdr">
+      <div>
+        <p class="t-greeting" id="greeting">Buenos días,</p>
+        <h1 class="t-page-title">Hola, <span id="u-title">Técnico</span></h1>
+        <p class="t-page-sub" id="dash-date"></p>
+      </div>
+    </div>
+
+    <!-- Resumen del día -->
+    <div class="t-section-card dash-resumen-card" style="margin-top:0">
+      <div class="t-section-hdr">
+        <span class="t-section-title">Resumen del día</span>
+      </div>
+      <div class="dash-resumen-grid">
+        <div class="dr-item">
+          <div class="dr-icon dr-blue"><i class="fa-solid fa-clipboard-list"></i></div>
+          <div class="dr-num" id="cnt-total">—</div>
+          <div class="dr-label">Total Órdenes</div>
         </div>
-        <svg class="t-caret" viewBox="0 0 24 24">
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-        <div class="t-dropdown">
-          <div class="t-dd-header">
-            <div class="t-dd-avatar" id="av3">T</div>
-            <div>
-              <div class="t-dd-name" id="u-name-dd">—</div>
-              <div class="t-dd-role">Técnico</div>
-            </div>
-          </div>
-          <div class="t-dd-sep"></div>
-          <button class="t-dd-item danger" onclick="logout()">
-            <svg viewBox="0 0 24 24">
-              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
-            </svg>
-            Cerrar sesión
-          </button>
+        <div class="dr-item">
+          <div class="dr-icon dr-orange"><i class="fa-solid fa-hourglass-half"></i></div>
+          <div class="dr-num" id="cnt-pendientes">—</div>
+          <div class="dr-label">Pendientes</div>
+        </div>
+        <div class="dr-item">
+          <div class="dr-icon dr-yellow"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+          <div class="dr-num" id="cnt-proceso">—</div>
+          <div class="dr-label">En proceso</div>
+        </div>
+        <div class="dr-item">
+          <div class="dr-icon dr-green"><i class="fa-solid fa-check"></i></div>
+          <div class="dr-num" id="cnt-finalizadas">—</div>
+          <div class="dr-label">Finalizadas</div>
         </div>
       </div>
     </div>
-  </nav>
 
-  <!-- ═══ MAIN ══════════════════════════════════════ -->
-  <main class="t-main">
-    <div id="page-title" style="display:none"></div>
+    <!-- Alertas urgentes -->
+    <div class="t-section-card">
+      <div class="t-section-hdr">
+        <span class="t-section-title"><i class="fa-solid fa-bell" style="color:var(--yellow);margin-right:6px"></i>Alertas urgentes</span>
+        <button class="t-link-btn" onclick="showPage('alertas','Alertas')">Ver todas →</button>
+      </div>
+      <div id="alertas-dash" class="dash-alertas-scroll">
+        <div class="td-loading">Cargando alertas…</div>
+      </div>
+    </div>
 
-    <!-- ██  DASHBOARD  ██ -->
-    <section id="page-dashboard" class="page active">
-      <div class="t-page-hdr">
-        <div>
-          <p class="t-greeting" id="greeting">Buenos días,</p>
-          <h1 class="t-page-title">Hola, <span id="u-title">Técnico</span> 👋</h1>
-          <p class="t-page-sub" id="dash-date"></p>
+    <!-- Gráfica gastos mensuales -->
+    <div class="t-section-card">
+      <div class="t-section-hdr">
+        <span class="t-section-title" id="gastos-chart-title">Gastos últimos 6 meses</span>
+        <div class="t-select-wrap">
+          <select id="sel-meses-gastos" onchange="drawMonthlyChart(parseInt(this.value,10))">
+            <option value="6">Últimos 6 meses</option>
+            <option value="12">Últimos 12 meses</option>
+          </select>
         </div>
       </div>
-
-      <style>
-        /* ── MÓVIL: 50/50 split, lista compacta ── */
-        .dash-layout {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-          margin-bottom: 16px;
-        }
-        .stat-list {
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          padding: 0;
-          margin: 0;
-          list-style: none;
-        }
-        .stat-list-item {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          background: #fff;
-          padding: 12px 10px;
-          border-radius: 12px;
-          border: 1px solid var(--slate-200);
-          box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-        }
-        .stat-li-left {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-        .stat-li-icon {
-          width: 34px;
-          height: 34px;
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 16px;
-        }
-        .stat-li-icon.blue { background: #e8f0fe; color: #1a56db; }
-        .stat-li-icon.yellow { background: #fef9e7; color: #f59e0b; }
-        .stat-li-icon.green { background: #e6f4ea; color: #15a362; }
-        .stat-li-label { font-size: 14px; font-weight: 600; color: var(--navy); }
-        .stat-li-sub { display: none; }
-        .stat-li-num { font-size: 20px; font-weight: 800; color: var(--navy); }
-
-        /* Icono campana solo en móvil */
-        .dash-alert-icon { display: none; }
-        .dash-alert-link { display: none; }
-        /* En alertas del dash: texto corto visible, texto largo oculto */
-        .ad-short { display: block; }
-        .ad-full  { display: none; }
-        .ad-badge { display: none; }
-
-        @media (max-width: 767px) {
-          .dash-alert-icon { display: inline; }
-          #alertas-dash .ai-dash-list > div:nth-child(n+3) { display: none !important; }
-        }
-
-        /* ── ESCRITORIO: 3 tarjetas + alertas abajo ── */
-        @media (min-width: 768px) {
-          .dash-layout {
-            grid-template-columns: 1fr; /* Una sola columna, todo apilado */
-            gap: 16px;
-          }
-          .stat-list {
-            flex-direction: row;
-            gap: 16px;
-          }
-          .stat-list-item {
-            flex: 1;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-            padding: 20px 16px;
-          }
-          .stat-li-left {
-            flex-direction: column;
-            gap: 8px;
-          }
-          .stat-li-icon {
-            width: 48px;
-            height: 48px;
-            font-size: 22px;
-          }
-          .stat-li-label { font-size: 15px; }
-          .stat-li-sub { display: block; font-size: 12px; color: var(--text-lt); margin-top: 4px; }
-          .stat-li-num { font-size: 28px; margin-top: 8px; }
-          .dash-alert-link { display: inline-flex; }
-          /* En desktop: texto largo visible, texto corto oculto */
-          .ad-short { display: none; }
-          .ad-full  { display: block; }
-          .ad-badge { display: inline-flex; }
-        }
-      </style>
-
-      <div class="dash-layout">
-        <!-- Estadísticas -->
-        <div>
-          <ul class="stat-list">
-            <li class="stat-list-item">
-              <div class="stat-li-left">
-                <div class="stat-li-icon blue"><i class="fa-solid fa-clipboard-list"></i></div>
-                <div class="stat-li-label">Mis abiertas</div>
-              </div>
-              <div class="stat-li-num" id="cnt-abiertas">—</div>
-              <div class="stat-li-sub">Pendientes de atención</div>
-            </li>
-            <li class="stat-list-item">
-              <div class="stat-li-left">
-                <div class="stat-li-icon yellow"><i class="fa-solid fa-screwdriver-wrench"></i></div>
-                <div class="stat-li-label">En proceso</div>
-              </div>
-              <div class="stat-li-num" id="cnt-proceso">—</div>
-              <div class="stat-li-sub">En reparación ahora</div>
-            </li>
-            <li class="stat-list-item">
-              <div class="stat-li-left">
-                <div class="stat-li-icon green"><i class="fa-solid fa-check"></i></div>
-                <div class="stat-li-label">Cerradas hoy</div>
-              </div>
-              <div class="stat-li-num" id="cnt-cerradas">—</div>
-              <div class="stat-li-sub">Completadas hoy</div>
-            </li>
-          </ul>
-        </div>
-
-        <!-- Alertas -->
-        <div class="t-section-card" style="margin-top: 0; display: flex; flex-direction: column;">
-          <div class="t-section-hdr">
-            <span class="t-section-title"><i class="fa-solid fa-bell dash-alert-icon" style="color:#f59e0b;margin-right:6px"></i>Alertas urgentes</span>
-            <button class="t-link-btn dash-alert-link" onclick="showPage('alertas','Alertas')">Ver todas →</button>
-          </div>
-          <div id="alertas-dash" style="flex: 1; overflow-y: auto;">
-            <div class="td-loading">Cargando alertas…</div>
-          </div>
-        </div>
+      <div style="padding:16px;position:relative;height:260px">
+        <canvas id="tec-monthly-chart"></canvas>
       </div>
-      <div class="t-section-card">
-        <div class="t-section-hdr">
-          <span class="t-section-title">Órdenes recientes</span>
-          <button class="t-link-btn" onclick="showPage('ordenes','Mis Órdenes')">Ver todas →</button>
-        </div>
-        <div class="t-table-wrap">
-          <table class="t-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Vehículo</th>
-                <th>Plan</th>
-                <th>Apertura</th>
-                <th>Estado</th>
-                <th>Costo</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="tb-mis-recientes">
-              <tr>
-                <td colspan="7" class="td-loading">Cargando…</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+    </div>
+
+    <!-- Órdenes activas -->
+    <div class="t-section-card">
+      <div class="t-section-hdr">
+        <span class="t-section-title">Órdenes activas</span>
+        <button class="t-link-btn" onclick="showPage('ordenes','Mis Órdenes')">Ver todas →</button>
       </div>
-
-
-    </section>
-
-    <!-- ██  MIS ÓRDENES  ██ -->
-    <section id="page-ordenes" class="page">
-      <div class="t-page-hdr">
-        <div>
-          <h1 class="t-page-title">Mis Órdenes</h1>
-          <p class="t-page-sub">Órdenes asignadas a ti</p>
-        </div>
+      <div id="dash-ordenes-activas" class="dash-ordenes-list">
+        <div class="td-loading">Cargando…</div>
       </div>
-      <div class="t-filters-bar">
-        <div class="t-search-wrap">
-          <svg viewBox="0 0 24 24">
-            <circle cx="11" cy="11" r="8" />
-            <path d="M21 21l-4.35-4.35" />
-          </svg>
-          <input type="text" id="search-mis" placeholder="Buscar por placa o #orden…" oninput="filtrarMisOrdenes()" />
+    </div>
+  </section>
+
+  <!-- ██  MIS ÓRDENES  ██ -->
+  <section id="page-ordenes" class="page">
+    <div class="t-page-hdr">
+      <div>
+        <h1 class="t-page-title">Mis Órdenes</h1>
+        <p class="t-page-sub">Órdenes asignadas a ti</p>
+      </div>
+    </div>
+    <div class="t-filters-bar">
+      <div class="t-search-wrap">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="search-mis" placeholder="Buscar por placa o #orden…" oninput="filtrarMisOrdenes()"/>
+      </div>
+      <div class="t-filter-group">
+        <select id="filtro-estado-ord" onchange="filtrarMisOrdenes()">
+          <option value="">Todos los estados</option>
+          <option value="Abierta">Abierta</option>
+          <option value="En proceso">En proceso</option>
+          <option value="Cerrada">Cerrada</option>
+        </select>
+      </div>
+    </div>
+    <div class="t-section-card">
+      <div class="t-table-wrap">
+        <table class="t-table">
+          <thead>
+            <tr><th>#</th><th>Vehículo</th><th>Plan</th><th>Apertura</th><th>Estado</th><th>Costo total</th><th>Acciones</th></tr>
+          </thead>
+          <tbody id="tb-mis-ord">
+            <tr><td colspan="6" class="td-loading">Cargando órdenes…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ██  MIS REPARACIONES  ██ -->
+  <section id="page-vehiculos" class="page">
+    <div class="t-page-hdr">
+      <div>
+        <h1 class="t-page-title">Mis Reparaciones</h1>
+        <p class="t-page-sub">Órdenes cerradas por ti</p>
+      </div>
+    </div>
+    <div class="t-filters-bar t-filters-stack">
+      <div class="t-search-wrap">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="search-reps" placeholder="Buscar por placa…" oninput="filtrarMisReps()"/>
+      </div>
+      <div class="t-fecha-row">
+        <div class="t-filter-group">
+          <label class="t-filter-label">Desde</label>
+          <input type="date" id="reps-desde" onchange="filtrarMisReps()" class="t-date-input"/>
         </div>
         <div class="t-filter-group">
-          <select id="filtro-estado-ord" onchange="filtrarMisOrdenes()">
-            <option value="">Todos los estados</option>
-            <option value="Abierta">Abierta</option>
-            <option value="En proceso">En proceso</option>
-            <option value="Cerrada">Cerrada</option>
-          </select>
+          <label class="t-filter-label">Hasta</label>
+          <input type="date" id="reps-hasta" onchange="filtrarMisReps()" class="t-date-input"/>
         </div>
       </div>
-      <div class="t-section-card">
-        <div class="t-table-wrap">
-          <table class="t-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Vehículo</th>
-                <th>Plan</th>
-                <th>Apertura</th>
-                <th>Estado</th>
-                <th>Costo total</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="tb-mis-ord">
-              <tr>
-                <td colspan="7" class="td-loading">Cargando órdenes…</td>
-              </tr>
-            </tbody>
-          </table>
+      <button class="btn-limpiar" onclick="limpiarFiltrosReps()">
+        <i class="fa-solid fa-xmark"></i> Limpiar
+      </button>
+    </div>
+    <div class="t-section-card">
+      <div class="t-table-wrap">
+        <table class="t-table">
+          <thead>
+            <tr>
+              <th class="rep-th-icon"></th>
+              <th class="rep-th-vehplaca" colspan="2">Vehículo / Placa</th>
+              <th class="rep-th-fecha">Fecha <i class="fa-solid fa-sort"></i></th>
+              <th class="rep-th-estado">Estado</th>
+              <th class="rep-th-costo">Costo</th>
+              <th class="rep-th-acciones">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tb-mis-reps">
+            <tr><td colspan="7" class="td-loading">Cargando historial…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ██  ALERTAS  ██ -->
+  <section id="page-alertas" class="page">
+    <div class="t-page-hdr">
+      <div>
+        <h1 class="t-page-title">Alertas del sistema</h1>
+        <p class="t-page-sub">Órdenes pendientes y mantenimiento de vehículos</p>
+      </div>
+    </div>
+    <div class="t-filters-bar t-filters-stack">
+      <div class="t-search-wrap">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" id="search-alertas" placeholder="Buscar por placa o mensaje…" oninput="filtrarAlertas()"/>
+      </div>
+      <div class="t-fecha-row">
+        <div class="t-filter-group">
+          <label class="t-filter-label">Desde</label>
+          <input type="date" id="alertas-desde" onchange="filtrarAlertas()" class="t-date-input"/>
+        </div>
+        <div class="t-filter-group">
+          <label class="t-filter-label">Hasta</label>
+          <input type="date" id="alertas-hasta" onchange="filtrarAlertas()" class="t-date-input"/>
         </div>
       </div>
-    </section>
+      <button class="btn-limpiar" onclick="limpiarFiltrosAlertas()">
+        <i class="fa-solid fa-xmark"></i> Limpiar
+      </button>
+    </div>
+    <div class="t-section-card">
+      <div id="alertas-full"><div class="td-loading">Cargando alertas…</div></div>
+      <div id="tec-alertas-pag"></div>
+    </div>
+  </section>
 
-    <!-- ██  MIS REPARACIONES  ██ -->
-    <section id="page-vehiculos" class="page">
-      <div class="t-page-hdr">
-        <div>
-          <h1 class="t-page-title">Mis Reparaciones</h1>
-          <p class="t-page-sub">Órdenes cerradas por ti</p>
-        </div>
-      </div>
-      <div class="t-section-card">
-        <div class="t-table-wrap">
-          <table class="t-table">
-            <thead>
-              <tr>
-                <th>Vehículo</th>
-                <th>Placa</th>
-                <th>Fecha</th>
-                <th>Estado</th>
-                <th>Costo total</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="tb-mis-reps">
-              <tr>
-                <td colspan="6" class="td-loading">Cargando historial…</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
+</main>
 
-    <!-- ██  ALERTAS  ██ -->
-    <section id="page-alertas" class="page">
-      <div class="t-page-hdr">
-        <div>
-          <h1 class="t-page-title">Alertas del sistema</h1>
-          <p class="t-page-sub">Órdenes pendientes + documentos y mantenimiento</p>
-        </div>
-      </div>
-      <div class="t-section-card">
-        <div id="alertas-full">
-          <div class="td-loading">Cargando alertas…</div>
-        </div>
-      </div>
-    </section>
+<!-- ═══ BOTTOM NAV (móvil) ════════════════════════ -->
+<nav class="t-bottom-nav" id="t-bottom-nav">
+  <button class="t-bn-item active" id="bn-dashboard" onclick="bnNav('dashboard','Inicio',this)">
+    <div class="t-bn-circle"></div>
+    <div class="t-bn-icon"><svg viewBox="0 0 24 24">
+      <rect x="3" y="3" width="7" height="7" rx="1"/>
+      <rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="3" y="14" width="7" height="7" rx="1"/>
+      <rect x="14" y="14" width="7" height="7" rx="1"/>
+    </svg></div>
+    <span class="t-bn-label">Inicio</span>
+  </button>
+  <button class="t-bn-item" id="bn-ordenes" onclick="bnNav('ordenes','Mis Órdenes',this)">
+    <div class="t-bn-circle"></div>
+    <div class="t-bn-icon"><svg viewBox="0 0 24 24">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+      <path d="M14 2v6h6"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+    </svg></div>
+    <span class="t-bn-label">Órdenes</span>
+  </button>
+  <button class="t-bn-item" id="bn-vehiculos" onclick="bnNav('vehiculos','Mis Reparaciones',this)">
+    <div class="t-bn-circle"></div>
+    <div class="t-bn-icon"><svg viewBox="0 0 24 24">
+      <path d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z"/>
+    </svg></div>
+    <span class="t-bn-label">Reparac.</span>
+  </button>
+  <button class="t-bn-item" id="bn-alertas" onclick="bnNav('alertas','Alertas',this)">
+    <div class="t-bn-circle"></div>
+    <div class="t-bn-icon">
+      <svg viewBox="0 0 24 24">
+        <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+        <path d="M13.73 21a2 2 0 01-3.46 0"/>
+      </svg>
+      <span id="bn-alertas-count" class="bn-badge"></span>
+    </div>
+    <span class="t-bn-label">Alertas</span>
+  </button>
+</nav>
 
-  </main>
+<!-- ═══ MODALES ═══════════════════════════════════ -->
 
-  <!-- ═══ BOTTOM NAV (móvil) ════════════════════════ -->
-  <nav class="t-bottom-nav" id="t-bottom-nav">
-    <button class="t-bn-item active" id="bn-dashboard" onclick="bnNav('dashboard','Inicio',this)">
-      <div class="t-bn-circle"></div>
-      <div class="t-bn-icon"><svg viewBox="0 0 24 24">
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
-          <rect x="14" y="14" width="7" height="7" rx="1" />
-        </svg></div>
-      <span class="t-bn-label">Inicio</span>
-    </button>
-    <button class="t-bn-item" id="bn-ordenes" onclick="bnNav('ordenes','Mis Órdenes',this)">
-      <div class="t-bn-circle"></div>
-      <div class="t-bn-icon"><svg viewBox="0 0 24 24">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-          <path d="M14 2v6h6" />
-          <line x1="16" y1="13" x2="8" y2="13" />
-          <line x1="16" y1="17" x2="8" y2="17" />
-        </svg></div>
-      <span class="t-bn-label">Órdenes</span>
-    </button>
-    <button class="t-bn-item" id="bn-vehiculos" onclick="bnNav('vehiculos','Mis Reparaciones',this)">
-      <div class="t-bn-circle"></div>
-      <div class="t-bn-icon"><svg viewBox="0 0 24 24">
-          <path
-            d="M14.7 6.3a1 1 0 000 1.4l1.6 1.6a1 1 0 001.4 0l3.77-3.77a6 6 0 01-7.94 7.94l-6.91 6.91a2.12 2.12 0 01-3-3l6.91-6.91a6 6 0 017.94-7.94l-3.76 3.76z" />
-        </svg></div>
-      <span class="t-bn-label">Reparac.</span>
-    </button>
-    <button class="t-bn-item" id="bn-alertas" onclick="bnNav('alertas','Alertas',this)">
-      <div class="t-bn-circle"></div>
-      <div class="t-bn-icon"><svg viewBox="0 0 24 24">
-          <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
-          <path d="M13.73 21a2 2 0 01-3.46 0" />
-        </svg></div>
-      <span class="t-bn-label">Alertas</span>
-    </button>
-  </nav>
-
-  <!-- ═══ MODALES ═══════════════════════════════════ -->
-
-  <!-- Modal costos + fotos (m-form-costos) -->
-  <div class="modal-overlay" id="m-form-costos" onclick="closeModalOutside(event,'m-form-costos')">
-    <div class="modal-box modal-lg">
-      <div class="modal-hdr t-modal-hdr-accent">
-        <h3 class="modal-title" id="fc-title">Costos y fotos</h3>
-        <button class="modal-close" onclick="closeModal('m-form-costos')">✕</button>
-      </div>
-      <div class="modal-body">
-        <!-- Sección costos — oculta en modo "Fotos antes" -->
-        <div id="fc-seccion-costos">
-          <div class="t-form-section-title">💰 Costos de la orden</div>
-          <div class="t-form-grid-2">
-            <div class="field-group">
-              <label>Mano de obra ($)</label>
-              <input type="number" id="fc-mano-obra" placeholder="0" oninput="recalcularTotal()" />
-            </div>
-            <div class="field-group">
-              <label>Total estimado</label>
-              <div class="t-total-preview" id="fc-total-preview">$0</div>
-            </div>
+<!-- Modal costos + fotos -->
+<div class="modal-overlay" id="m-form-costos" onclick="closeModalOutside(event,'m-form-costos')">
+  <div class="modal-box modal-lg">
+    <div class="modal-hdr t-modal-hdr-accent">
+      <h3 class="modal-title" id="fc-title">Costos y fotos</h3>
+      <button class="modal-close" onclick="closeModal('m-form-costos')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="fc-seccion-costos">
+        <div class="t-form-section-title"><i class="fa-solid fa-coins" style="color:var(--yellow)"></i> Costos de la orden</div>
+        <div class="t-form-grid-2">
+          <div class="field-group">
+            <label>Mano de obra ($)</label>
+            <input type="number" id="fc-mano-obra" placeholder="0" oninput="recalcularTotal()"/>
           </div>
           <div class="field-group">
-            <label>Descripción del trabajo</label>
-            <textarea id="fc-descripcion" rows="2" placeholder="Describe el trabajo realizado…"></textarea>
+            <label>Total estimado</label>
+            <div class="t-total-preview" id="fc-total-preview">$0</div>
           </div>
-          <div class="t-form-section-title t-mt16">🔩 Repuestos</div>
-          <div class="t-rep-form">
-            <input type="text" id="rep-nombre" placeholder="Nombre del repuesto" style="flex:2" />
-            <input type="number" id="rep-cantidad" placeholder="Cant." min="1" style="width:70px;flex:none" />
-            <input type="number" id="rep-precio" placeholder="Precio unit." min="0" oninput="recalcularTotal()"
-              style="flex:1" />
-            <button class="t-btn-add" onclick="agregarRepuesto()">+ Agregar</button>
-          </div>
-          <div class="t-table-wrap">
-            <table class="t-table t-table-sm">
-              <thead>
-                <tr>
-                  <th>Repuesto</th>
-                  <th>Cant.</th>
-                  <th>Precio unit.</th>
-                  <th>Subtotal</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="tb-repuestos">
-                <tr>
-                  <td colspan="5" class="td-loading" style="font-size:12px">Sin repuestos</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="t-sep t-mt16"></div>
         </div>
-
-        <!-- Fotos -->
-        <div class="t-form-section-title t-mt16">📷 Fotos</div>
-        <div class="field-group" id="t-tipo-foto-group">
-          <label>Tipo de foto</label>
-          <select id="fc-tipo-foto">
-            <option value="antes">Antes del trabajo</option>
-            <option value="despues">Después del trabajo</option>
-          </select>
+        <div class="field-group">
+          <label>Descripción del trabajo</label>
+          <textarea id="fc-descripcion" rows="2" placeholder="Describe el trabajo realizado…"></textarea>
         </div>
-        <label class="t-foto-drop">
-          <svg viewBox="0 0 24 24">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <circle cx="8.5" cy="8.5" r="1.5" />
-            <path d="M21 15l-5-5L5 21" />
-          </svg>
-          <span>Toca para adjuntar fotos (máx. 5 · 10 MB total)</span>
-          <input type="file" id="fc-input-fotos" accept="image/jpeg,image/png" multiple style="display:none"
-            onchange="agregarFotos(this)" />
-        </label>
-        <div id="fotos-preview" class="t-fotos-preview"></div>
-      </div>
-      <div class="modal-footer">
-        <button class="btn-primary" id="btn-guardar-costos" onclick="guardarCostos()">Guardar</button>
-        <button class="btn-outline" onclick="closeModal('m-form-costos')">Cancelar</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal detalle orden -->
-  <div class="modal-overlay" id="m-det-ord" onclick="closeModalOutside(event,'m-det-ord')">
-    <div class="modal-box modal-lg">
-      <div class="modal-hdr">
-        <h3 class="modal-title" id="mdo-title">Detalle orden</h3>
-        <button class="modal-close" onclick="closeModal('m-det-ord')">✕</button>
-      </div>
-      <div class="modal-body" id="mdo-body">
-        <div class="td-loading">Cargando…</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal detalle vehículo -->
-  <div class="modal-overlay" id="m-det-veh" onclick="closeModalOutside(event,'m-det-veh')">
-    <div class="modal-box modal-lg">
-      <div class="modal-hdr">
-        <h3 class="modal-title" id="mdv-title">Detalle vehículo</h3>
-        <button class="modal-close" onclick="closeModal('m-det-veh')">✕</button>
-      </div>
-      <div class="modal-body" id="mdv-body">
-        <div class="td-loading">Cargando…</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Modal ver foto grande -->
-  <div class="modal-overlay" id="m-foto-grande" onclick="closeModalOutside(event,'m-foto-grande')">
-    <div class="modal-box" style="max-width:580px;background:transparent;box-shadow:none">
-      <div style="position:relative">
-        <img id="foto-grande-img" src="" alt="" style="width:100%;border-radius:12px;display:block" />
-        <button onclick="closeModal('m-foto-grande')"
-          style="position:absolute;top:10px;right:10px;background:rgba(0,0,0,.55);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:15px">✕</button>
-        <div id="foto-grande-nombre" style="text-align:center;color:#fff;margin-top:8px;font-size:13px;font-weight:600">
+        <div class="t-form-section-title t-mt16"><i class="fa-solid fa-screwdriver-wrench" style="color:var(--text-md)"></i> Repuestos</div>
+        <div class="t-rep-form">
+          <input type="text" id="rep-nombre" placeholder="Nombre del repuesto" style="flex:2"/>
+          <input type="number" id="rep-cantidad" placeholder="Cant." min="1" style="width:70px;flex:none"/>
+          <input type="number" id="rep-precio" placeholder="Precio unit." min="0" oninput="recalcularTotal()" style="flex:1"/>
+          <button class="t-btn-add" onclick="agregarRepuesto()">+ Agregar</button>
         </div>
+        <div class="t-table-wrap">
+          <table class="t-table t-table-sm">
+            <thead>
+              <tr><th>Repuesto</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th><th></th></tr>
+            </thead>
+            <tbody id="tb-repuestos">
+              <tr><td colspan="5" class="td-loading">Sin repuestos</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="t-sep t-mt16"></div>
       </div>
+
+      <!-- Fotos -->
+      <div class="t-form-section-title t-mt16"><i class="fa-solid fa-camera" style="color:var(--blue)"></i> Fotos</div>
+      <div class="field-group" id="t-tipo-foto-group">
+        <label>Tipo de foto</label>
+        <select id="fc-tipo-foto">
+          <option value="antes">Antes del trabajo</option>
+          <option value="despues">Después del trabajo</option>
+        </select>
+      </div>
+      <label class="t-foto-drop">
+        <svg viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5"/>
+          <path d="M21 15l-5-5L5 21"/>
+        </svg>
+        <span>Toca para adjuntar fotos (máx. 5 · 10 MB total)</span>
+        <input type="file" id="fc-input-fotos" accept="image/jpeg,image/png" multiple style="display:none" onchange="agregarFotos(this)"/>
+      </label>
+      <div id="fotos-preview" class="t-fotos-preview"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" id="btn-guardar-costos" onclick="guardarCostos()">Guardar</button>
+      <button class="btn-outline" onclick="closeModal('m-form-costos')">Cancelar</button>
     </div>
   </div>
+</div>
 
-  <div id="toast" class="toast"></div>
+<!-- Modal detalle orden -->
+<div class="modal-overlay" id="m-det-ord" onclick="closeModalOutside(event,'m-det-ord')">
+  <div class="modal-box modal-lg">
+    <div class="modal-hdr">
+      <h3 class="modal-title" id="mdo-title">Detalle orden</h3>
+      <button class="modal-close" onclick="closeModal('m-det-ord')">✕</button>
+    </div>
+    <div class="modal-body" id="mdo-body"><div class="td-loading">Cargando…</div></div>
+  </div>
+</div>
 
-  <script src="../assets/js/api.js"></script>
-  <script src="../assets/js/notificacion.js"></script>
-  <script src="../assets/js/tecnico.js"></script>
-  <script>
-    // ── Bottom nav ────────────────────────────────
-    function bnNav(id, title, el) {
-      document.querySelectorAll('.t-bn-item').forEach(b => b.classList.remove('active'));
-      el.classList.add('active');
-      showPage(id, title);
-      // Sync topnav active
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      document.getElementById('nav-' + id)?.classList.add('active');
-    }
+<!-- Modal detalle vehículo -->
+<div class="modal-overlay" id="m-det-veh" onclick="closeModalOutside(event,'m-det-veh')">
+  <div class="modal-box modal-lg">
+    <div class="modal-hdr">
+      <h3 class="modal-title" id="mdv-title">Detalle vehículo</h3>
+      <button class="modal-close" onclick="closeModal('m-det-veh')">✕</button>
+    </div>
+    <div class="modal-body" id="mdv-body"><div class="td-loading">Cargando…</div></div>
+  </div>
+</div>
 
-    // ── Init ──────────────────────────────────────
-    document.addEventListener('DOMContentLoaded', function () {
-      // Init bell
-      if (typeof FC_ADMIN_PANEL !== 'undefined') FC_ADMIN_PANEL.init?.();
-      else setTimeout(() => { if (typeof FC_ADMIN_PANEL !== 'undefined') FC_ADMIN_PANEL.init?.(); }, 100);
+<!-- Modal ver foto grande -->
+<div class="modal-overlay" id="m-foto-grande" onclick="closeModalOutside(event,'m-foto-grande')">
+  <div class="modal-box" style="max-width:580px;background:transparent;box-shadow:none">
+    <div style="position:relative">
+      <img id="foto-grande-img" src="" alt="" class="foto-grande-img"/>
+      <button onclick="closeModal('m-foto-grande')" class="foto-grande-close">✕</button>
+      <div id="foto-grande-nombre" class="foto-grande-nombre"></div>
+    </div>
+  </div>
+</div>
 
-      // Close avatar dropdown on outside click
-      document.addEventListener('click', function (e) {
-        const wrap = document.querySelector('.t-avatar-wrap');
-        if (wrap && !wrap.contains(e.target)) wrap.classList.remove('open');
-      });
-    });
+<div id="toast" class="toast"></div>
 
-    // ── Mis reparaciones ─────────────────────────
-    const REP_PER_PAGE = 10;
-    let repPagActual = 1;
-    let repListaActual = [];
-
-    async function cargarMisReparaciones() {
-      const tb = document.getElementById('tb-mis-reps');
-      if (!tb) return;
-      try {
-        let ords = (typeof misOrdenes !== 'undefined' && misOrdenes.length)
-          ? misOrdenes
-          : await (async () => {
-            const u = getUsuario ? getUsuario() : (typeof usuario !== 'undefined' ? usuario : { id: null });
-            const res = await api('GET', '/ordenes');
-            const todas = res.data || res || [];
-            return todas.filter(o => o.tecnico?.id === u.id || o.tecnicoId === u.id);
-          })();
-        const cerradas = ords.filter(o => o.estado === 'Cerrada');
-        repListaActual = cerradas;
-        repPagActual = 1;
-        _renderRepPag();
-      } catch (err) {
-        tb.innerHTML = `<tr><td colspan="6" class="td-loading" style="color:var(--red)">Error: ${err.message}</td></tr>`;
-      }
-    }
-
-    function _renderRepPag() {
-      const tb = document.getElementById('tb-mis-reps');
-      const total = repListaActual.length;
-      const pages = Math.max(1, Math.ceil(total / REP_PER_PAGE));
-      repPagActual = Math.min(Math.max(1, repPagActual), pages);
-
-      if (!tb) return;
-      if (!total) {
-        tb.innerHTML = '<tr><td colspan="6" class="td-loading">Sin reparaciones cerradas aún</td></tr>';
-        _renderRepPagCtrl(0, 1, 0);
-        return;
-      }
-
-      const desde = (repPagActual - 1) * REP_PER_PAGE;
-      const pagina = repListaActual.slice(desde, desde + REP_PER_PAGE);
-      tb.innerHTML = pagina.map(o => `<tr>
-    <td data-label="Vehículo">${o.vehiculo?.marca || '—'} ${o.vehiculo?.modelo || ''}</td>
-    <td data-label="Placa"><strong>${o.vehiculo?.placa || '—'}</strong></td>
-    <td data-label="Fecha">${fmtFecha(o.fechaCierre || o.fechaApertura)}</td>
-    <td data-label="Estado"><span class="badge-estado cerrada">Cerrada</span></td>
-    <td data-label="Costo total">$${fmt(o.costoTotal || 0)}</td>
-    <td data-label="Acciones"><button class="btn-ghost btn-sm" onclick="abrirDetalleOrden(${o.id})">Ver</button></td>
-  </tr>`).join('');
-      _renderRepPagCtrl(total, pages, repPagActual);
-    }
-
-    function _renderRepPagCtrl(total, pages, current) {
-      let cont = document.getElementById('t-rep-pagination');
-      if (!cont) {
-        const sc = document.querySelector('#page-vehiculos .t-section-card');
-        if (!sc) return;
-        cont = document.createElement('div');
-        cont.id = 't-rep-pagination';
-        cont.className = 't-pagination';
-        sc.appendChild(cont);
-      }
-      if (pages <= 1) { cont.innerHTML = ''; return; }
-      const desde = (current - 1) * REP_PER_PAGE + 1;
-      const hasta = Math.min(current * REP_PER_PAGE, total);
-      const nums = _rPagNums(current, pages);
-      const btns = nums.map(n => {
-        if (n === '…') return `<span class="t-pag-dots">…</span>`;
-        return `<button class="t-pag-btn${n === current ? ' active' : ''}" onclick="repPagActual=${n};_renderRepPag()">${n}</button>`;
-      }).join('');
-      cont.innerHTML = `
-    <div class="t-pag-inner">
-      <button class="t-pag-btn" onclick="repPagActual--;_renderRepPag()" ${current === 1 ? 'disabled' : ''}>‹</button>
-      ${btns}
-      <button class="t-pag-btn" onclick="repPagActual++;_renderRepPag()" ${current === pages ? 'disabled' : ''}>›</button>
-      <span class="t-pag-info">${desde}–${hasta} de ${total}</span>
-    </div>`;
-    }
-
-    function _rPagNums(cur, total) {
-      if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-      const s = new Set([1, total, cur, cur - 1, cur + 1].filter(n => n >= 1 && n <= total));
-      const arr = [...s].sort((a, b) => a - b);
-      const res = [];
-      arr.forEach((n, i) => {
-        if (i && n - arr[i - 1] > 1) res.push('…');
-        res.push(n);
-      });
-      return res;
-    }
-
-    // Patch showPage to load reparaciones when entering vehiculos tab
-    const _tOrigShow = window.showPage;
-    window.showPage = function (id, title) {
-      if (typeof _tOrigShow === 'function') _tOrigShow(id, title);
-      if (id === 'vehiculos') setTimeout(cargarMisReparaciones, 200);
-    };
-  </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="../assets/js/api.js"></script>
+<script src="../assets/js/notificacion.js"></script>
+<script src="../assets/js/tecnico.js"></script>
 </body>
-
 </html>

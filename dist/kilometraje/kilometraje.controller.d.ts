@@ -1,5 +1,6 @@
 import { KilometrajeService } from './kilometraje.service';
 import { CreateRegistroKmDto } from './dto/create-registro-km.dto';
+import { CerrarPendienteDto } from './dto/cerrar-pendiente.dto';
 export declare class KilometrajeController {
     private readonly service;
     constructor(service: KilometrajeService);
@@ -12,4 +13,11 @@ export declare class KilometrajeController {
         turno: string;
         mensaje: string;
     }>;
+}
+export declare class ConductorKilometrajeController {
+    private readonly service;
+    constructor(service: KilometrajeService);
+    historialConductor(conductorId: number): Promise<import("./registro-km.entity").RegistroKm[]>;
+    turnosPendientes(conductorId: number): Promise<any[]>;
+    cerrarPendiente(conductorId: number, registroInicioId: number, dto: CerrarPendienteDto, req: any): Promise<import("./registro-km.entity").RegistroKm>;
 }

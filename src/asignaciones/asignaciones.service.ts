@@ -11,12 +11,15 @@ import {
 } from './asignacion_conductor.entity';
 import { CreateAsignacionDto } from './dto/create.asignacion.dto';
 import { UpdateAsignacionDto } from './dto/update.asignacion.dto';
+import { DocumentoLegal } from '../documentos/documento-legal.entity';
 
 @Injectable()
 export class AsignacionesService {
   constructor(
     @InjectRepository(AsignacionConductor)
     private readonly repo: Repository<AsignacionConductor>,
+    @InjectRepository(DocumentoLegal)
+    private readonly docRepo: Repository<DocumentoLegal>,
   ) {}
 
   // ── Crear asignación con validaciones ─────────────────────────────────────
@@ -73,6 +76,21 @@ export class AsignacionesService {
       }
     }
 
+    // ── Validar documentos del vehículo ────────────────────────────────────
+    const hoy = new Date().toISOString().split('T')[0];
+    const docsVencidos = await this.docRepo
+      .createQueryBuilder('d')
+      .where('d.vehiculo_id = :vid', { vid: dto.vehiculoId })
+      .andWhere('d.fecha_vencimiento < :hoy', { hoy })
+      .getMany();
+
+    if (docsVencidos.length > 0) {
+      const nombres = docsVencidos.map(d => `${d.tipo} (venció ${d.fechaVencimiento})`).join(', ');
+      throw new BadRequestException(
+        `El vehículo no puede ser asignado: tiene documentos vencidos → ${nombres}`,
+      );
+    }
+
     // ── Todo OK → guardar ───────────────────────────────────────────────────
     const asignacion = this.repo.create({
       vehiculo: { id: dto.vehiculoId } as any,
@@ -103,18 +121,17 @@ export class AsignacionesService {
     });
   }
 
-  // ── Listar asignaciones de un conductor ──────────────────────────────────
-  // Incluye: activas siempre + inactivas cuyo rango cubre hoy
+  // ── Listar asignaciones de un conductor vigentes HOY ─────────────────────
+  // Solo trae asignaciones cuyo rango de fechas cubre el día actual
   async porConductor(conductorId: number): Promise<AsignacionConductor[]> {
     const hoy = new Date().toISOString().split('T')[0];
     return this.repo
       .createQueryBuilder('a')
       .leftJoinAndSelect('a.vehiculo', 'v')
       .where('a.conductor_id = :cid', { cid: conductorId })
-      .andWhere(
-        '(a.activo = true OR (a.fecha_inicio <= :hoy AND (a.fecha_fin >= :hoy OR a.fecha_fin IS NULL)))',
-        { hoy },
-      )
+      .andWhere('a.activo = true')
+      .andWhere('a.fecha_inicio <= :hoy', { hoy })
+      .andWhere('(a.fecha_fin >= :hoy OR a.fecha_fin IS NULL)', { hoy })
       .orderBy('a.created_at', 'DESC')
       .getMany();
   }
@@ -227,5 +244,13 @@ export class AsignacionesService {
 
     await this.repo.save(asig);
     return this.buscarPorId(id);
+  }
+
+  async todasPorConductor(conductorId: number): Promise<AsignacionConductor[]> {
+    return this.repo.find({
+      where: { conductor: { id: conductorId } },
+      relations: ['vehiculo', 'conductor'],
+      order: { fechaInicio: 'DESC', createdAt: 'DESC' },
+    });
   }
 }

@@ -97,6 +97,7 @@ let PrediccionService = PrediccionService_1 = class PrediccionService {
                 if (kmRestantes <= 0) {
                     diasEstimados = 0;
                     color = prediccion_vehiculo_entity_1.ColorUrgencia.ROJO;
+                    fechaEstimada = hoy.toISOString().split('T')[0];
                 }
                 else if (kmDiaRes.kmPorDia && kmDiaRes.kmPorDia > 0) {
                     diasEstimados = Math.ceil(kmRestantes / kmDiaRes.kmPorDia);

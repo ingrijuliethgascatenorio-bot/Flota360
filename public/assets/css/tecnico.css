@@ -31,7 +31,7 @@
   --font:      'Outfit', sans-serif;
   --font2:     'Space Grotesk', sans-serif;
   --nav-h:     60px;
-  --bn-h:      64px; /* bottom nav height */
+  --bn-h:      68px; /* bottom nav height */
   --r6:6px; --r8:8px; --r12:12px; --r16:16px; --r20:20px; --r99:999px;
   --sh0: 0 1px 3px rgba(0,0,0,.06);
   --sh1: 0 4px 16px rgba(0,0,0,.09);
@@ -343,6 +343,47 @@ body {
 }
 .t-filter-group select:focus { border-color: var(--blue); }
 
+/* ── Filtro de fecha ──────────────────────────────────────────────────── */
+.t-filter-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-lt);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-right: 5px;
+  white-space: nowrap;
+}
+.t-date-input {
+  padding: 8px 11px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r12);
+  font-size: 13px;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--white);
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  cursor: pointer;
+}
+.t-date-input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(59,130,246,.10);
+}
+.t-date-input:hover { border-color: var(--navy); }
+
+/* ── Botón limpiar filtros ────────────────────────────────────────────── */
+.btn-limpiar {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 11px;
+  border-radius: var(--r12);
+  font-size: 11.5px; font-weight: 600;
+  border: 1.5px solid var(--border);
+  background: var(--white); color: var(--text-lt);
+  cursor: pointer; font-family: var(--font);
+  transition: all .15s; white-space: nowrap;
+}
+.btn-limpiar:hover { border-color: var(--red); color: var(--red); background: #fff5f5; }
+
 /* ════════════════════════════════════════════════
    SEPARADOR SECCIÓN
 ════════════════════════════════════════════════ */
@@ -645,54 +686,76 @@ body {
   position: fixed; bottom: 0; left: 0; right: 0;
   height: var(--bn-h);
   background: var(--white);
-  border-top: 1.5px solid var(--border);
-  box-shadow: 0 -4px 20px rgba(0,0,0,.08);
+  border-top: 1px solid var(--border);
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  box-shadow: 0 -8px 24px rgba(2, 13, 31, 0.05);
   z-index: 1000;
   justify-content: space-around; align-items: center;
-  padding: 0 8px 4px;
+  padding: 0 8px 6px;
+  overflow: visible;
 }
 .t-bn-item {
   display: flex; flex-direction: column; align-items: center;
   gap: 3px; background: none; border: none;
-  cursor: pointer; padding: 6px 12px; position: relative;
-  font-family: var(--font); flex: 1; max-width: 80px;
+  cursor: pointer; padding: 6px 16px; position: relative;
+  font-family: var(--font); flex: 1; max-width: 90px;
+  overflow: visible;
 }
 .t-bn-circle {
   position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%, -60%) scale(0);
-  width: 48px; height: 48px; border-radius: 50%;
-  background: var(--blue-100);
+  transform: translate(-50%, -50%) scale(0);
+  width: 52px; height: 52px; border-radius: 50%;
+  background: var(--blue);
   opacity: 0;
   transition: transform .35s cubic-bezier(.34,1.56,.64,1), opacity .3s;
   pointer-events: none;
+  box-shadow: 0 8px 16px rgba(26, 86, 219, 0.35), 0 0 0 5px var(--white);
 }
 .t-bn-icon {
-  position: relative; z-index: 1;
+  position: relative; z-index: 2;
   width: 24px; height: 24px;
   display: flex; align-items: center; justify-content: center;
   transition: transform .35s cubic-bezier(.34,1.56,.64,1);
 }
 .t-bn-icon svg {
   width: 22px; height: 22px;
-  stroke: var(--text-lt); fill: none;
+  stroke: #9ca3af; fill: none;
   stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round;
   transition: stroke .2s;
 }
+/* Contador de notificaciones sobre el ícono "Alertas" del menú inferior */
+.bn-badge{
+  display:none;
+  position:absolute; top:-4px; right:-8px;
+  min-width:16px; height:16px; padding:0 4px;
+  border-radius:999px;
+  background:var(--red);
+  color:#fff; font-size:9.5px; font-weight:800;
+  align-items:center; justify-content:center;
+  line-height:1; z-index:3;
+  border:1.5px solid var(--white);
+  font-family:var(--font);
+}
 .t-bn-label {
   position: relative; z-index: 1;
-  font-size: 10.5px; font-weight: 600; color: var(--text-lt);
-  transition: color .2s;
+  font-size: 11px; font-weight: 600; color: #9ca3af;
+  transition: color .2s, transform .2s;
 }
-/* Active state — circle rises */
+/* Active state — circle pops up, icon centered */
 .t-bn-item.active .t-bn-circle {
-  transform: translate(-50%, -65%) scale(1);
+  transform: translate(-50%, calc(-50% - 14px)) scale(1);
   opacity: 1;
 }
 .t-bn-item.active .t-bn-icon {
-  transform: translateY(-6px);
+  transform: translateY(-14px);
 }
-.t-bn-item.active .t-bn-icon svg { stroke: var(--navy); }
-.t-bn-item.active .t-bn-label { color: var(--navy); font-weight: 700; }
+.t-bn-item.active .t-bn-icon svg { stroke: #ffffff; }
+.t-bn-item.active .t-bn-label {
+  color: var(--blue);
+  font-weight: 700;
+  transform: translateY(2px);
+}
 
 /* ════════════════════════════════════════════════
    RESPONSIVE
@@ -719,6 +782,8 @@ body {
 
 /* ═══════════════════════════════════════════════════
    MÓVIL — Ocultar campana de notificaciones
+   (el contador ahora se muestra en el menú inferior,
+   en el botón "Alertas")
 ═══════════════════════════════════════════════════ */
 @media(max-width:768px){
   #fc-bell-container-tec,
@@ -883,6 +948,154 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════
+   MIS REPARACIONES — fila tipo lista con ícono
+   (solo afecta #page-vehiculos, no toca otras tablas)
+═══════════════════════════════════════════════════ */
+.rep-veh-icon{
+  width:36px; height:36px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; flex-shrink:0;
+}
+.rep-veh-icon.blue   { background:var(--blue-100); color:var(--blue); }
+.rep-veh-icon.orange { background:#fff4e6; color:#f97316; }
+.rep-veh-icon.purple { background:#f3e8ff; color:#9333ea; }
+.rep-veh-icon.teal   { background:#d1fae5; color:#0d9488; }
+.rep-veh-icon.slate  { background:#f1f5f9; color:#64748b; }
+
+#page-vehiculos .t-table .rep-th-icon{ width:48px; }
+#page-vehiculos .t-table tbody td.rep-veh-icon-cell{ text-align:center; }
+
+@media(max-width:640px){
+  #page-vehiculos .t-table tbody tr{
+    display:grid;
+    grid-template-columns:40px 1fr 64px 70px 60px 18px;
+    grid-template-rows:auto auto;
+    align-items:center;
+    column-gap:8px;
+    row-gap:1px;
+    padding:12px 14px;
+    background:transparent;
+    border:none;
+    border-radius:0;
+    margin-bottom:0;
+    border-bottom:1px solid var(--border);
+  }
+  #page-vehiculos .t-table tbody tr:last-child{
+    border-bottom:none;
+  }
+
+  /* Quitar el look "tarjeta dentro de tarjeta" del patrón genérico */
+  #page-vehiculos .t-table tbody td{
+    display:block;
+    background:transparent;
+    border-radius:0;
+    padding:0;
+    font-size:12px;
+    line-height:1.3;
+  }
+  #page-vehiculos .t-table tbody td::before{ content:none; }
+
+  /* Ícono del vehículo — ocupa ambas filas */
+  #page-vehiculos .t-table tbody td.rep-veh-icon-cell{
+    grid-column:1; grid-row:1/3;
+    display:flex; align-items:center; justify-content:center;
+  }
+
+  /* Marca/modelo arriba, placa abajo — misma columna */
+  #page-vehiculos .t-table tbody td[data-label="Vehículo"]{
+    grid-column:2; grid-row:1;
+    font-size:12px; font-weight:600; color:var(--text-md);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  #page-vehiculos .t-table tbody td[data-label="Placa"]{
+    grid-column:2; grid-row:2;
+    font-family:var(--font2); font-size:14px; font-weight:800; color:var(--navy);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+
+  /* Fecha, estado, costo y flecha — centrados verticalmente */
+  #page-vehiculos .t-table tbody td[data-label="Fecha"]{
+    grid-column:3; grid-row:1/3;
+    font-size:11px; color:var(--text-lt); text-align:center;
+    white-space:nowrap;
+  }
+  #page-vehiculos .t-table tbody td[data-label="Estado"]{
+    grid-column:4; grid-row:1/3;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #page-vehiculos .t-table tbody td[data-label="Costo total"]{
+    grid-column:5; grid-row:1/3;
+    font-family:var(--font2); font-size:13px; font-weight:800; color:var(--navy);
+    text-align:right; white-space:nowrap;
+  }
+
+  /* Acciones → flecha "chevron" en vez de botón "Ver" */
+  #page-vehiculos .t-table tbody td[data-label="Acciones"]{
+    grid-column:6; grid-row:1/3;
+    display:flex; align-items:center; justify-content:center;
+  }
+  #page-vehiculos .t-table tbody td[data-label="Acciones"] .btn-ghost.btn-sm{
+    width:18px !important; height:18px !important; padding:0 !important; border:none !important; background:transparent !important;
+    font-size:0 !important; color:var(--text-lt);
+    display:flex; align-items:center; justify-content:center;
+  }
+  #page-vehiculos .t-table tbody td[data-label="Acciones"] .btn-ghost.btn-sm::after{
+    content:"\f054";
+    font-family:"Font Awesome 6 Free"; font-weight:900; font-size:13px;
+  }
+
+  /* Encabezado — mismo grid que las filas, alineado con cada columna */
+  #page-vehiculos .t-table thead{
+    display:grid;
+    grid-template-columns:40px 1fr 64px 70px 60px 18px;
+    align-items:center;
+    column-gap:8px;
+    padding:14px 14px 8px;
+  }
+  #page-vehiculos .t-table thead tr{ display:contents; }
+  #page-vehiculos .t-table thead th{
+    background:transparent; border-bottom:none;
+    padding:0; margin:0;
+    font-size:11px; font-weight:700; color:var(--text-lt);
+    text-transform:none; letter-spacing:normal; white-space:nowrap;
+  }
+  #page-vehiculos .t-table thead .rep-th-icon{ grid-column:1; }
+  #page-vehiculos .t-table thead .rep-th-vehplaca{ grid-column:2; text-align:left; }
+  #page-vehiculos .t-table thead .rep-th-fecha{ grid-column:3; text-align:center; }
+  #page-vehiculos .t-table thead .rep-th-fecha i{ font-size:10px; margin-left:3px; }
+  #page-vehiculos .t-table thead .rep-th-estado{ grid-column:4; text-align:center; }
+  #page-vehiculos .t-table thead .rep-th-costo{ grid-column:5; text-align:right; }
+  #page-vehiculos .t-table thead .rep-th-acciones{ grid-column:6; font-size:0; }
+}
+
+/* ── Pantallas muy angostas (<450px): ocultar el ícono del vehículo ── */
+@media(max-width:410px){
+  #page-vehiculos .t-table tbody tr{
+    grid-template-columns:1fr 64px 70px 60px 18px;
+  }
+  #page-vehiculos .t-table tbody td.rep-veh-icon-cell{
+    display:none;
+  }
+  #page-vehiculos .t-table tbody td[data-label="Vehículo"]{ grid-column:1; grid-row:1; }
+  #page-vehiculos .t-table tbody td[data-label="Placa"]{ grid-column:1; grid-row:2; }
+  #page-vehiculos .t-table tbody td[data-label="Fecha"]{ grid-column:2; }
+  #page-vehiculos .t-table tbody td[data-label="Estado"]{ grid-column:3; }
+  #page-vehiculos .t-table tbody td[data-label="Costo total"]{ grid-column:4; }
+  #page-vehiculos .t-table tbody td[data-label="Acciones"]{ grid-column:5; }
+
+  /* Encabezado: mismo ajuste de columnas, sin ícono */
+  #page-vehiculos .t-table thead{
+    grid-template-columns:1fr 64px 70px 60px 18px;
+  }
+  #page-vehiculos .t-table thead .rep-th-icon{ display:none; }
+  #page-vehiculos .t-table thead .rep-th-vehplaca{ grid-column:1; }
+  #page-vehiculos .t-table thead .rep-th-fecha{ grid-column:2; }
+  #page-vehiculos .t-table thead .rep-th-estado{ grid-column:3; }
+  #page-vehiculos .t-table thead .rep-th-costo{ grid-column:4; }
+  #page-vehiculos .t-table thead .rep-th-acciones{ grid-column:5; }
+}
+
+/* ═══════════════════════════════════════════════════
    PAGINACIÓN — técnico (órdenes)
 ═══════════════════════════════════════════════════ */
 .t-pagination{
@@ -947,77 +1160,129 @@ body {
   .t-pag-info{width:100%;text-align:center;margin-left:0;margin-top:4px}
 }
 /* ═══════════════════════════════════════════════════════════
-   ALERTAS — DASHBOARD (cards compactas)
+   ALERTAS — DASHBOARD (scroll horizontal de tarjetas)
 ═══════════════════════════════════════════════════════════ */
 .ai-dash-list{
   display:flex;
-  flex-direction:column;
-  gap:0;
-  padding:4px 0 8px;
+  gap:10px;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
 }
+.ai-dash-list::-webkit-scrollbar{display:none}
 
 .ai-dash-card{
+  flex:0 0 auto;
+  width:128px;
   display:flex;
-  align-items:center;
-  gap:12px;
-  padding:13px 18px;
-  border-bottom:1px solid var(--border);
-  transition:background .15s;
-  cursor:default;
+  flex-direction:column;
+  gap:8px;
+  padding:12px;
+  border:1.5px solid var(--border);
+  border-radius:var(--r12);
+  background:var(--white);
+  cursor:pointer;
+  transition:box-shadow .15s, border-color .15s;
 }
-.ai-dash-card:last-child{border-bottom:none}
-.ai-dash-card:hover{background:#fafbfd}
+.ai-dash-card:hover{box-shadow:var(--sh1); border-color:var(--blue)}
 
-/* Círculo avatar izquierda */
-.ai-dash-avatar{
-  width:42px;height:42px;
-  border-radius:50%;
-  border:2px solid;
+.ai-dash-card-icon{
+  width:30px;height:30px;border-radius:9px;
   display:flex;align-items:center;justify-content:center;
-  flex-shrink:0;
+  font-size:14px;
 }
-.ai-dash-emoji{font-size:18px;line-height:1}
-
-/* Cuerpo */
-.ai-dash-body{flex:1;min-width:0}
-.ai-dash-msg{
-  font-size:13px;font-weight:600;color:var(--text);
-  line-height:1.4;
+.ai-dash-card-plate{font-family:var(--font2);font-weight:700;font-size:13px;color:var(--navy)}
+.ai-dash-card-cat{
+  font-size:11.5px;color:var(--text-lt);font-weight:500;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  margin-top:-4px;
 }
-.ai-dash-meta{
-  display:flex;align-items:center;gap:10px;
-  margin-top:3px;
-}
-.ai-dash-placa{font-size:11.5px;color:var(--text-lt);font-weight:500}
-.ai-dash-time {font-size:11px;color:var(--text-lt)}
-
-/* Derecha: badge + botón */
-.ai-dash-right{
-  display:flex;flex-direction:column;
-  align-items:flex-end;gap:5px;flex-shrink:0;
-}
-.ai-dash-badge{
-  display:inline-block;
-  font-size:10px;font-weight:800;
-  text-transform:uppercase;letter-spacing:.04em;
-  padding:2px 8px;border-radius:999px;
+.ai-dash-card-badge{
+  align-self:flex-start;
+  font-size:10px;font-weight:700;
+  padding:3px 8px;border-radius:999px;
   white-space:nowrap;
 }
-.ai-badge-blue  {background:#e8f0fe;color:#1a56db}
-.ai-badge-yellow{background:#fef9e7;color:#92400e}
-.ai-badge-orange{background:#fff4e6;color:#c2410c}
-.ai-badge-red   {background:#fff0f0;color:#ef4444}
-.ai-badge-green {background:#d1fae5;color:#065f46}
 
-.ai-dash-btn{
-  font-size:11.5px;font-weight:700;
-  color:var(--blue);background:none;border:none;
-  cursor:pointer;font-family:var(--font);
-  padding:0;
-  transition:color .15s;
+/* ═══════════════════════════════════════════════════════════
+   RESUMEN DEL DÍA — 4 indicadores en fila
+═══════════════════════════════════════════════════════════ */
+.dash-resumen-grid{
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:6px;
+  padding:16px 12px;
 }
-.ai-dash-btn:hover{color:var(--navy)}
+.dr-item{
+  display:flex;flex-direction:column;
+  align-items:center;text-align:center;gap:6px;
+  min-width:0;
+}
+.dr-icon{
+  width:32px;height:32px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;
+}
+.dr-icon.dr-blue   { background:var(--blue-100); color:var(--blue); }
+.dr-icon.dr-orange { background:#fff4e6; color:#f97316; }
+.dr-icon.dr-yellow { background:var(--yellow-lt); color:var(--yellow); }
+.dr-icon.dr-green  { background:var(--green-lt);  color:var(--green); }
+.dr-num{
+  font-family:var(--font2); font-size:19px; font-weight:800;
+  color:var(--navy); line-height:1;
+}
+.dr-label{
+  font-size:10px; font-weight:600; color:var(--text-lt);
+  line-height:1.25;
+}
+@media(min-width:600px){
+  .dash-resumen-grid{ padding:20px 18px; gap:14px; }
+  .dr-icon{ width:42px; height:42px; font-size:17px; }
+  .dr-num{ font-size:26px; }
+  .dr-label{ font-size:12px; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SELECTOR DE PERÍODO (gráfica de gastos)
+═══════════════════════════════════════════════════════════ */
+.t-select-wrap select{
+  font-family:var(--font); font-size:12px; font-weight:600;
+  color:var(--text-md); background:var(--white);
+  border:1.5px solid var(--border); border-radius:var(--r8);
+  padding:6px 10px; cursor:pointer;
+}
+.t-select-wrap select:focus{ outline:none; border-color:var(--blue); }
+
+/* ═══════════════════════════════════════════════════════════
+   ÓRDENES ACTIVAS — lista compacta del dashboard
+═══════════════════════════════════════════════════════════ */
+.dash-ordenes-list{ display:flex; flex-direction:column; }
+.dol-item{
+  display:flex; align-items:center; gap:12px;
+  padding:13px 18px; border-bottom:1px solid var(--border);
+  cursor:pointer; transition:background .15s;
+}
+.dol-item:last-child{ border-bottom:none; }
+.dol-item:hover{ background:#fafbfd; }
+.dol-icon{
+  width:38px; height:38px; border-radius:50%;
+  background:var(--blue-100); color:var(--blue);
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; flex-shrink:0;
+}
+.dol-info{ flex:1; min-width:0; }
+.dol-plate{ font-family:var(--font2); font-weight:700; font-size:13.5px; color:var(--navy); }
+.dol-meta{ font-size:12px; color:var(--text-lt); margin-top:2px; }
+.dol-meta .dol-estado{ font-weight:700; }
+.dol-meta .dol-estado.abierta    { color:var(--blue); }
+.dol-meta .dol-estado.en-proceso { color:#92400e; }
+.dol-meta .dol-estado.cerrada    { color:var(--green); }
+.dol-right{
+  display:flex; flex-direction:column; align-items:flex-end; gap:6px;
+  flex-shrink:0;
+}
+.dol-date{ font-size:11.5px; color:var(--text-lt); }
+.dol-right i{ color:var(--text-lt); font-size:12px; }
 
 /* ═══════════════════════════════════════════════════════════
    ALERTAS — SECCIÓN FEED (estilo red social)
@@ -1181,6 +1446,8 @@ body {
 .fc-mob-notif-icon i,
 .fc-confirm-icon-wrap i,
 .ai-dash-emoji i,
+.rep-veh-icon i,
+.ai-dash-card-icon i,
 .ai-feed-emoji i,
 .ai-empty-icon i,
 .doc-tec-icon i,
@@ -1190,4 +1457,61 @@ body {
   line-height: inherit;
   color: inherit;
   display: inline-block;
+}
+/* ── Modal foto grande ────────────────────────────────────────────────── */
+.foto-grande-img   { width: 100%; border-radius: 12px; display: block; }
+.foto-grande-close {
+  position: absolute; top: 10px; right: 10px;
+  background: rgba(0,0,0,.55); border: none; color: #fff;
+  width: 32px; height: 32px; border-radius: 50%;
+  cursor: pointer; font-size: 15px;
+  display: flex; align-items: center; justify-content: center;
+}
+.foto-grande-nombre {
+  text-align: center; color: #fff;
+  margin-top: 8px; font-size: 13px; font-weight: 600;
+}
+
+/* ── dash alertas-urgentes overflow ──────────────────────────────────── */
+.dash-alertas-scroll { padding: 14px 16px 16px; }
+
+/* ── Filtros apilados en columna (Solo móvil) ────────────────────────── */
+.t-filters-stack {
+  gap: 12px;
+}
+.t-fecha-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .t-filters-stack {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .t-filters-stack .t-search-wrap {
+    width: 100%;
+  }
+  .t-filters-stack .btn-limpiar {
+    align-self: flex-end;
+  }
+  
+  /* Fechas apiladas en móvil con label a la izquierda e input ocupando el resto */
+  .t-fecha-row {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+  .t-fecha-row .t-filter-group {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+  }
+  .t-fecha-row .t-filter-group input {
+    flex: 1;
+    margin-left: 10px;
+  }
 }

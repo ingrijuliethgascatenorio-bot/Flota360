@@ -1,10 +1,4 @@
-/* ═══════════════════════════════════════════════════════════════════
-   carga-masiva.js — Carga masiva de Usuarios y Buses + Exportación
-   Agregar al final de admin.html:  <script src="carga-masiva.js"></script>
-   NO modifica nada del código existente.
-═══════════════════════════════════════════════════════════════════ */
 
-// ─── SheetJS desde CDN (cargado dinámicamente si no está presente) ───────────
 (function loadSheetJS() {
   if (window.XLSX) return;
   const s = document.createElement('script');

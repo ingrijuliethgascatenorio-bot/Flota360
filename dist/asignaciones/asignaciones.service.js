@@ -17,10 +17,13 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const asignacion_conductor_entity_1 = require("./asignacion_conductor.entity");
+const documento_legal_entity_1 = require("../documentos/documento-legal.entity");
 let AsignacionesService = class AsignacionesService {
     repo;
-    constructor(repo) {
+    docRepo;
+    constructor(repo, docRepo) {
         this.repo = repo;
+        this.docRepo = docRepo;
     }
     async crear(dto) {
         const fIni = dto.fechaInicio;
@@ -50,6 +53,16 @@ let AsignacionesService = class AsignacionesService {
                     throw new common_1.BadRequestException(`Conflicto de conductor: El conductor ya tiene una asignación (${a.turno} en ${a.vehiculo.placa}) en este periodo.`);
                 }
             }
+        }
+        const hoy = new Date().toISOString().split('T')[0];
+        const docsVencidos = await this.docRepo
+            .createQueryBuilder('d')
+            .where('d.vehiculo_id = :vid', { vid: dto.vehiculoId })
+            .andWhere('d.fecha_vencimiento < :hoy', { hoy })
+            .getMany();
+        if (docsVencidos.length > 0) {
+            const nombres = docsVencidos.map(d => `${d.tipo} (venció ${d.fechaVencimiento})`).join(', ');
+            throw new common_1.BadRequestException(`El vehículo no puede ser asignado: tiene documentos vencidos → ${nombres}`);
         }
         const asignacion = this.repo.create({
             vehiculo: { id: dto.vehiculoId },
@@ -81,7 +94,9 @@ let AsignacionesService = class AsignacionesService {
             .createQueryBuilder('a')
             .leftJoinAndSelect('a.vehiculo', 'v')
             .where('a.conductor_id = :cid', { cid: conductorId })
-            .andWhere('(a.activo = true OR (a.fecha_inicio <= :hoy AND (a.fecha_fin >= :hoy OR a.fecha_fin IS NULL)))', { hoy })
+            .andWhere('a.activo = true')
+            .andWhere('a.fecha_inicio <= :hoy', { hoy })
+            .andWhere('(a.fecha_fin >= :hoy OR a.fecha_fin IS NULL)', { hoy })
             .orderBy('a.created_at', 'DESC')
             .getMany();
     }
@@ -167,11 +182,20 @@ let AsignacionesService = class AsignacionesService {
         await this.repo.save(asig);
         return this.buscarPorId(id);
     }
+    async todasPorConductor(conductorId) {
+        return this.repo.find({
+            where: { conductor: { id: conductorId } },
+            relations: ['vehiculo', 'conductor'],
+            order: { fechaInicio: 'DESC', createdAt: 'DESC' },
+        });
+    }
 };
 exports.AsignacionesService = AsignacionesService;
 exports.AsignacionesService = AsignacionesService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(asignacion_conductor_entity_1.AsignacionConductor)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __param(1, (0, typeorm_1.InjectRepository)(documento_legal_entity_1.DocumentoLegal)),
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository])
 ], AsignacionesService);
 //# sourceMappingURL=asignaciones.service.js.map

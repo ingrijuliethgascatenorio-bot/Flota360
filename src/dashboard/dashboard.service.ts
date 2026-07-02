@@ -143,7 +143,7 @@ export class DashboardService {
       [vehiculoId, ...filtroAlertas.params],
     );
 
-    const planes: PlanResumen[] = await this.dataSource.query(
+    const planesDb: PlanResumen[] = await this.dataSource.query(
       `SELECT id, nombre, tipo_ciclo AS "tipoCiclo",
               km_proximo AS "kmProximo",
               fecha_proxima::text AS "fechaProxima",
@@ -156,6 +156,20 @@ export class DashboardService {
        ORDER BY km_proximo ASC NULLS LAST`,
       [vehiculoId],
     );
+
+    const snapshot = await this.prediccionService.getSnapshotVehiculo(vehiculoId);
+
+    const planes: PlanResumen[] = planesDb.map(p => {
+      const pred = prediccion.predicciones.find(pr => pr.planId === p.id);
+      let fProx = p.fechaProxima || pred?.fechaEstimada || null;
+      if (!fProx && snapshot && snapshot.planNombre === p.nombre) {
+        fProx = snapshot.fechaEstimada;
+      }
+      return {
+        ...p,
+        fechaProxima: fProx,
+      };
+    });
 
     const hoy = new Date();
     const documentosRaw: Array<{

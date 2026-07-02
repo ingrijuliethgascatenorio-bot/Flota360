@@ -41,6 +41,9 @@ let AsignacionesController = class AsignacionesController {
     porConductor(id) {
         return this.service.porConductor(id);
     }
+    todasPorConductor(id) {
+        return this.service.todasPorConductor(id);
+    }
     desactivar(id) {
         return this.service.desactivar(id);
     }
@@ -91,6 +94,14 @@ __decorate([
     __metadata("design:paramtypes", [Number]),
     __metadata("design:returntype", void 0)
 ], AsignacionesController.prototype, "porConductor", null);
+__decorate([
+    (0, roles_decorator_1.Roles)(usuario_entity_1.RolUsuario.ADMINISTRADOR, usuario_entity_1.RolUsuario.TECNICO, usuario_entity_1.RolUsuario.CONDUCTOR),
+    (0, common_1.Get)('conductores/:id/asignaciones/todas'),
+    __param(0, (0, common_1.Param)('id', common_1.ParseIntPipe)),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number]),
+    __metadata("design:returntype", void 0)
+], AsignacionesController.prototype, "todasPorConductor", null);
 __decorate([
     (0, roles_decorator_1.Roles)(usuario_entity_1.RolUsuario.ADMINISTRADOR),
     (0, common_1.Patch)('asignaciones/:id/desactivar'),

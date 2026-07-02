@@ -21,13 +21,13 @@ export class VehiculosController {
     return this.service.crear(dto);
   }
 
-  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.TECNICO)
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.TECNICO, RolUsuario.CONDUCTOR)
   @Get()
   listar() {
     return this.service.listar();
   }
 
-  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.TECNICO)
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.TECNICO, RolUsuario.CONDUCTOR)
   @Get(':id')
   buscar(@Param('id', ParseIntPipe) id: number) {
     return this.service.buscarPorId(id);

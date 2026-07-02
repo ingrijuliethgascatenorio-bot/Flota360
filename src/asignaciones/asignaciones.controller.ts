@@ -56,6 +56,13 @@ export class AsignacionesController {
     return this.service.porConductor(id);
   }
 
+  // GET /conductores/:id/asignaciones/todas — todas las asignaciones históricas del conductor
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.TECNICO, RolUsuario.CONDUCTOR)
+  @Get('conductores/:id/asignaciones/todas')
+  todasPorConductor(@Param('id', ParseIntPipe) id: number) {
+    return this.service.todasPorConductor(id);
+  }
+
   // PATCH /asignaciones/:id/desactivar
   @Roles(RolUsuario.ADMINISTRADOR)
   @Patch('asignaciones/:id/desactivar')

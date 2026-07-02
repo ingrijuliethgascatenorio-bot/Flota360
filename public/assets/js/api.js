@@ -1,6 +1,4 @@
-/* ═══════════════════════════════════════════════
-   FLOTACONTROL — api.js  (compartido por todos)
-═══════════════════════════════════════════════ */
+
 const _BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:3002'
   : window.location.origin;
@@ -22,6 +20,10 @@ async function api(method, path, body = null) {
   const data = await res.json().catch(() => ({}));
 
   if (res.status === 401) {
+    if (path.includes('/auth/login')) {
+      const msg = data?.message || 'Credenciales incorrectas';
+      throw new Error(Array.isArray(msg) ? msg.join(', ') : msg);
+    }
     clearSession();
     window.location.href = '/pages/login.html';
     throw new Error('Sesión expirada');

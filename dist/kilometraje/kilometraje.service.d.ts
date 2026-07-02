@@ -1,6 +1,7 @@
 import { Repository } from 'typeorm';
 import { RegistroKm } from './registro-km.entity';
 import { CreateRegistroKmDto } from './dto/create-registro-km.dto';
+import { CerrarPendienteDto } from './dto/cerrar-pendiente.dto';
 import { VehiculosService } from '../vehiculos/vehiculos.service';
 import { UsuariosService } from '../usuarios/usuarios.service';
 import { PlanesService } from '../planes/planes.service';
@@ -17,11 +18,14 @@ export declare class KilometrajeService {
     registrar(vehiculoId: number, conductorId: number, dto: CreateRegistroKmDto): Promise<RegistroKm>;
     private finalizarAsignacionActiva;
     historial(vehiculoId: number): Promise<RegistroKm[]>;
+    historialConductor(conductorId: number): Promise<RegistroKm[]>;
     kmInicioEncadenado(vehiculoId: number, conductorId: number): Promise<{
         kmSugerido: number;
         encadenado: boolean;
         turno: string;
         mensaje: string;
     }>;
+    turnosPendientes(conductorId: number): Promise<any[]>;
+    cerrarTurnoPendiente(conductorId: number, registroInicioId: number, dto: CerrarPendienteDto): Promise<RegistroKm>;
     calcularKmPorDia(vehiculoId: number): Promise<import("../prediccion/prediccion.service").KmDiaResultado>;
 }

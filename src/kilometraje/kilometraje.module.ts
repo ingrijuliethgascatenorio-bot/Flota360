@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { RegistroKm } from './registro-km.entity';
 import { AsignacionConductor } from '../asignaciones/asignacion_conductor.entity';
 import { KilometrajeService } from './kilometraje.service';
-import { KilometrajeController } from './kilometraje.controller';
+import { KilometrajeController, ConductorKilometrajeController } from './kilometraje.controller';
 import { VehiculosModule } from '../vehiculos/vehiculos.module';
 import { UsuariosModule } from '../usuarios/usuarios.module';
 import { PlanesModule } from '../planes/planes.module';
@@ -18,7 +18,7 @@ import { PrediccionModule } from '../prediccion/prediccion.module';
     PrediccionModule,
   ],
   providers: [KilometrajeService],
-  controllers: [KilometrajeController],
+  controllers: [KilometrajeController, ConductorKilometrajeController],
   exports: [KilometrajeService],
 })
 export class KilometrajeModule {}

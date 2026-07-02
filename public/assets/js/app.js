@@ -1,7 +1,3 @@
-/* ═══════════════════════════════════════════════════
-   app.js — Dashboard Administrador — Filtros completos
-═══════════════════════════════════════════════════ */
-
 const usuario = requireRole('Administrador');
 if (!usuario) throw new Error('stop');
 
@@ -11,7 +7,6 @@ let vehCache = [];   // /vehiculos  → id
 let usrCache = [];
 let ordCache = [];
 let alertasCache = [];   // todas las alertas cargadas
-let rankingCache = [];   // ranking completo
 let reporteCache = [];   // filas del reporte actual
 let asigCache = [];
 let planesCache = [];    // planes de mantenimiento
@@ -67,13 +62,11 @@ function showPage(id, title) {
   if (id === 'alertas') {
     cargarAlertas();
     // Ocultar badges al ver alertas (estilo TikTok/FB)
-    const bSidebar = document.getElementById('nav-alertas-badge');
     const bTopbar = document.getElementById('notif-badge');
-    if (bSidebar) bSidebar.style.display = 'none';
     if (bTopbar) bTopbar.style.display = 'none';
   }
-  if (id === 'reportes') cargarRanking();
   if (id === 'asignaciones') cargarAsignaciones();
+  if (id === 'galeria') cargarGaleria();
 }
 
 // ── Dropdown Usuario ──
@@ -99,24 +92,21 @@ async function cargarDashboard() {
     document.getElementById('cnt-t').textContent = d.totalVehiculos ?? 0;
 
     const totalAlertas = (d.vehiculos || []).reduce((s, v) => s + (v.alertasActivas || 0), 0);
-    const bSidebar = document.getElementById('nav-alertas-badge');
     const bTopbar = document.getElementById('notif-badge');
 
     if (totalAlertas > 0) {
-      if (bSidebar) { bSidebar.textContent = totalAlertas; bSidebar.style.display = 'block'; }
       if (bTopbar) { bTopbar.textContent = totalAlertas; bTopbar.style.display = 'block'; }
     } else {
-      if (bSidebar) bSidebar.style.display = 'none';
       if (bTopbar) bTopbar.style.display = 'none';
     }
 
     dashVehCache = d.vehiculos || [];
-    // Mostrar todos por defecto al ingresar
-    renderGrid(dashVehCache);
+    // Mostrar urgentes por defecto
+    filterSem('rojo');
     // Marcar tab activo
     document.querySelectorAll('.dash-ftab').forEach(b => b.classList.remove('active'));
-    const tabTodos = document.getElementById('dash-ftab-todos');
-    if (tabTodos) tabTodos.classList.add('active');
+    const tabRojo = document.getElementById('dash-ftab-rojo');
+    if (tabRojo) tabRojo.classList.add('active');
 
     // Si hay vehículos sin kmPorDia, recalcular predicción en background y refrescar grid
     const sinPrediccion = dashVehCache.filter(v => v.kmPorDia == null);
@@ -126,7 +116,9 @@ async function cargarDashboard() {
       ).then(() =>
         api('GET', '/dashboard').then(r => {
           dashVehCache = r.data?.vehiculos || dashVehCache;
-          renderGrid(dashVehCache);
+          const tabActivo = document.querySelector('.dash-ftab.active');
+          const tipo = tabActivo?.id?.replace('dash-ftab-', '') || 'rojo';
+          filterSem(tipo);
         }).catch(() => { })
       ).catch(() => { });
     }
@@ -136,32 +128,105 @@ async function cargarDashboard() {
   }
 }
 
-async function cargarInsights() {
+async function cargarInsights(periodoParam) {
+  // Si no viene periodo, usar el del input o el mes actual
+  const inputEl = document.getElementById('ins-periodo');
+  const hoy = new Date();
+  const mesActual = `${hoy.getFullYear()}-${String(hoy.getMonth()+1).padStart(2,'0')}`;
+
+  // Determinar qué periodo usar
+  let periodo = periodoParam || (inputEl?.value) || mesActual;
+
+  // Si se llamó sin argumento (init o botón Hoy), resetear input al mes actual
+  if (!periodoParam && inputEl) {
+    inputEl.value = mesActual;
+    periodo = mesActual;
+  }
+  // Si viene periodo desde el input onchange, sincronizar
+  if (periodoParam && inputEl && periodoParam !== 'init') {
+    inputEl.value = periodoParam;
+  }
+
+  // Label legible del periodo para los subtítulos
+  const [anio, mes] = periodo.split('-');
+  const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
+                 'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const labelPeriodo = `${MESES[parseInt(mes)-1]} ${anio}`;
+  const esMesActual  = periodo === mesActual;
+  const labelSub     = esMesActual ? 'Este mes' : labelPeriodo;
+
+  // Mostrar loading
+  ['ins-veh','ins-rep','ins-tec'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '…';
+  });
+
   try {
-    const res = await api('GET', '/salud-financiera/insights');
-    const i = res.data;
+    const res = await api('GET', `/salud-financiera/insights?periodo=${periodo}`);
+    // El backend devuelve { data: { vehiculoMasCostoso, ... } }
+    const i = res.data ?? res;
+
     if (i?.vehiculoMasCostoso) {
       document.getElementById('ins-veh').textContent = `${i.vehiculoMasCostoso.placa} · ${i.vehiculoMasCostoso.marca}`;
       const v = i.vehiculoMasCostoso.variacionPct;
-      document.getElementById('ins-veh-s').textContent = `$${fmt(i.vehiculoMasCostoso.costoTotal)}` +
-        (v !== null ? ` (${v > 0 ? '+' : ''}${Number(v).toFixed(1)}%)` : '');
+      document.getElementById('ins-veh-s').textContent =
+        `$${fmt(i.vehiculoMasCostoso.costoTotal)}` +
+        (v != null ? ` (${v > 0 ? '+' : ''}${Number(v).toFixed(1)}%)` : '') +
+        ` · ${labelSub}`;
+    } else {
+      document.getElementById('ins-veh').textContent = 'Sin datos';
+      document.getElementById('ins-veh-s').textContent = labelSub;
     }
+
     if (i?.tecnicoMasActivo) {
       document.getElementById('ins-tec').textContent = i.tecnicoMasActivo.nombre;
-      document.getElementById('ins-tec-s').textContent = `${i.tecnicoMasActivo.otCerradas} órdenes cerradas`;
+      document.getElementById('ins-tec-s').textContent = `${i.tecnicoMasActivo.otCerradas} órdenes · ${labelSub}`;
+    } else {
+      document.getElementById('ins-tec').textContent = 'Sin datos';
+      document.getElementById('ins-tec-s').textContent = labelSub;
     }
+
     if (i?.repuestoMasUsado) {
       document.getElementById('ins-rep').textContent = i.repuestoMasUsado.nombre;
-      document.getElementById('ins-rep-s').textContent = `${i.repuestoMasUsado.cantidad} unidades`;
+      document.getElementById('ins-rep-s').textContent = `${i.repuestoMasUsado.cantidad} unidades · ${labelSub}`;
+    } else {
+      document.getElementById('ins-rep').textContent = 'Sin datos';
+      document.getElementById('ins-rep-s').textContent = labelSub;
     }
-  } catch { }
+  } catch(e) {
+    console.error('[Insights] ERROR:', e.message);
+    ['ins-veh','ins-rep','ins-tec'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '—';
+    });
+  }
 }
 
+const _dashPag = { page: 1, pageSize: 10, lista: [] };
+
 function renderGrid(lista) {
+  _dashPag.lista = lista;
+  _dashPag.page = 1;
+  _renderGridPage();
+}
+
+function _dashPagGo(page) {
+  _dashPag.page = page;
+  _renderGridPage();
+}
+
+function _renderGridPage() {
+  const { page, pageSize, lista } = _dashPag;
   const g = document.getElementById('veh-grid');
-  if (!lista.length) { g.innerHTML = '<div class="grid-loading">Sin vehículos</div>'; return; }
+  const total = lista.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const start = (page - 1) * pageSize;
+  const slice = lista.slice(start, start + pageSize);
+
+  if (!total) { g.innerHTML = '<div class="grid-loading">Sin vehículos</div>'; _clearDashPagBar(); return; }
+
   const semLabel = { verde: 'Operativo', amarillo: 'Proximo', rojo: 'Urgente' };
-  const rows = lista.map(v => {
+  const rows = slice.map(v => {
     const s = v.estadoSemaforo || 'verde';
     const dias = v.diasEstimados != null
       ? (v.diasEstimados <= 0 ? '<span style="color:var(--red);font-weight:600">Vencido</span>' : '~' + v.diasEstimados + ' dias')
@@ -179,14 +244,37 @@ function renderGrid(lista) {
   g.innerHTML = '<table class="data-table" style="width:100%"><thead><tr>' +
     '<th>Placa</th><th>Vehiculo</th><th>Km actual</th><th>Km/dia est.</th><th>Estado</th><th>Alertas</th><th>Proximo mant.</th>' +
     '</tr></thead><tbody>' + rows + '</tbody></table>';
+
+  // Barra de paginación del dashboard
+  const bar = document.getElementById('pag-dash');
+  if (!bar) return;
+  if (totalPages <= 1) { bar.innerHTML = ''; return; }
+  const btn = (label, p, disabled, active) =>
+    `<button class="pag-btn${active ? ' active' : ''}${disabled ? ' disabled' : ''}"
+      ${disabled ? 'disabled' : `onclick="_dashPagGo(${p})"`}>${label}</button>`;
+  const from = start + 1, to = Math.min(start + pageSize, total);
+  const range = new Set([1, totalPages, page, page-1, page+1].filter(p => p >= 1 && p <= totalPages));
+  const sorted = [...range].sort((a,b) => a-b);
+  let pages = ''; let prev = 0;
+  for (const p of sorted) {
+    if (p - prev > 1) pages += `<span class="pag-ellipsis">…</span>`;
+    pages += btn(p, p, false, p === page);
+    prev = p;
+  }
+  bar.innerHTML = `<span class="pag-info">${from}–${to} de ${total}</span>
+    <div class="pag-controls">${btn('‹', page-1, page===1, false)}${pages}${btn('›', page+1, page===totalPages, false)}</div>`;
+}
+
+function _clearDashPagBar() {
+  const bar = document.getElementById('pag-dash');
+  if (bar) bar.innerHTML = '';
 }
 
 function filterSem(tipo) {
-  // Usar IDs únicos de dash-ftab para no desfasarse con tabs de reportes
   document.querySelectorAll('.dash-ftab').forEach(b => b.classList.remove('active'));
   const tab = document.getElementById('dash-ftab-' + tipo);
   if (tab) tab.classList.add('active');
-  renderGrid(tipo === 'todos' ? dashVehCache : dashVehCache.filter(v => v.estadoSemaforo === tipo));
+  renderGrid(dashVehCache.filter(v => v.estadoSemaforo === tipo));
 }
 
 // ══════════════════════════════════════════════════
@@ -417,6 +505,63 @@ async function marcarLeida(vehiculoId, alertaId, btn) {
 // ══════════════════════════════════════════════════
 // VEHÍCULOS + FILTROS
 // ══════════════════════════════════════════════════
+// PAGINACIÓN — motor genérico
+// ══════════════════════════════════════════════════
+const _pag = {};  // estado por sección: { page, pageSize, total, lista, renderFn }
+
+function pagInit(sec, lista, renderFn, pageSize = 15) {
+  _pag[sec] = { page: 1, pageSize, lista, renderFn };
+  pagRender(sec);
+}
+
+function pagRender(sec) {
+  const s = _pag[sec];
+  if (!s) return;
+  const total = s.lista.length;
+  const totalPages = Math.max(1, Math.ceil(total / s.pageSize));
+  if (s.page > totalPages) s.page = totalPages;
+  const start = (s.page - 1) * s.pageSize;
+  const slice = s.lista.slice(start, start + s.pageSize);
+  s.renderFn(slice);
+  _renderPagBar(sec, s.page, totalPages, total, start + 1, Math.min(start + s.pageSize, total));
+}
+
+function pagGo(sec, page) {
+  if (!_pag[sec]) return;
+  _pag[sec].page = page;
+  pagRender(sec);
+}
+
+function _renderPagBar(sec, page, totalPages, total, from, to) {
+  const bar = document.getElementById(`pag-${sec}`);
+  if (!bar) return;
+  if (total === 0) { bar.innerHTML = ''; return; }
+
+  const btn = (label, p, disabled, active) =>
+    `<button class="pag-btn${active ? ' active' : ''}${disabled ? ' disabled' : ''}"
+      ${disabled ? 'disabled' : `onclick="pagGo('${sec}',${p})"`}>${label}</button>`;
+
+  let pages = '';
+  // Siempre mostrar: primera, última, actual ±1, con ... intermedios
+  const range = new Set([1, totalPages, page, page - 1, page + 1].filter(p => p >= 1 && p <= totalPages));
+  const sorted = [...range].sort((a, b) => a - b);
+  let prev = 0;
+  for (const p of sorted) {
+    if (p - prev > 1) pages += `<span class="pag-ellipsis">…</span>`;
+    pages += btn(p, p, false, p === page);
+    prev = p;
+  }
+
+  bar.innerHTML = `
+    <span class="pag-info">${from}–${to} de ${total}</span>
+    <div class="pag-controls">
+      ${btn('‹', page - 1, page === 1, false)}
+      ${pages}
+      ${btn('›', page + 1, page === totalPages, false)}
+    </div>`;
+}
+
+// ══════════════════════════════════════════════════
 async function cargarVehiculos() {
   try {
     const res = await api('GET', '/vehiculos');
@@ -445,7 +590,7 @@ function aplicarFiltrosVeh() {
     return true;
   });
 
-  renderTablaVehiculos(res);
+  pagInit('veh', res, renderTablaVehiculos);
   const s = document.getElementById('fv-summary');
   if (s) s.innerHTML = res.length !== vehCache.length
     ? `Mostrando <strong>${res.length}</strong> de ${vehCache.length} vehículos` : '';
@@ -545,7 +690,7 @@ function aplicarFiltrosOrd() {
     return true;
   });
 
-  renderTablaOrdenes(res);
+  pagInit('ord', res, renderTablaOrdenes);
   const s = document.getElementById('fo-summary');
   if (s) s.innerHTML = res.length !== ordCache.length
     ? `Mostrando <strong>${res.length}</strong> de ${ordCache.length} órdenes` : '';
@@ -557,22 +702,34 @@ function limpiarFiltrosOrd() {
   aplicarFiltrosOrd();
 }
 
+/**
+ * Determina el tipo de plan de una orden.
+ * - Si tiene plan asociado → Preventivo (fue generada por un plan de mantenimiento)
+ * - Sin plan               → Correctivo (intervención directa)
+ * SRP: única responsabilidad — derivar la etiqueta de plan a partir de la orden.
+ */
+function etiquetaPlan(orden) {
+  return orden?.plan?.nombre || (orden?.planId ? 'Preventivo' : 'Correctivo');
+}
+
 function renderTablaOrdenes(lista) {
   const tb = document.getElementById('tb-ord');
   if (!tb) return;
-  if (!lista.length) { tb.innerHTML = '<tr><td colspan="7" class="td-loading">Sin órdenes con estos filtros</td></tr>'; return; }
+  if (!lista.length) { tb.innerHTML = '<tr><td colspan="8" class="td-loading">Sin órdenes con estos filtros</td></tr>'; return; }
   tb.innerHTML = lista.map(o => {
     const est = (o.estado || '').toLowerCase().replace(' ', '-');
+    const plan = etiquetaPlan(o);
+    const esPrev = plan !== 'Correctivo';
     return `<tr>
       <td>#${o.id}</td>
       <td>${o.vehiculo?.placa || '—'}</td>
       <td>${o.tecnico?.nombre || '—'}</td>
+      <td><span class="badge-plan ${esPrev ? 'preventivo' : 'correctivo'}">${plan}</span></td>
       <td>${fmtFecha(o.fechaApertura)}</td>
       <td><span class="badge-estado ${est}">${o.estado}</span></td>
       <td>$${fmt(o.costoTotal || 0)}</td>
       <td><div class="action-btns">
         <button class="btn-ghost btn-sm" onclick="abrirDetalleOrden(${o.id})">Ver</button>
-
         ${o.estado !== 'Cerrada' && o.estado !== 'Cancelada' ? `<button class="btn-warning btn-sm" onclick="cancelarOrden(${o.id})">Cancelar</button>` : ''}
         <button class="btn-danger btn-sm" onclick="eliminarOrden(${o.id})">Eliminar</button>
       </div></td></tr>`;
@@ -588,12 +745,15 @@ async function abrirDetalleOrden(id) {
     const o = res.data ?? res;
 
     const est = (o.estado || '').toLowerCase().replace(' ', '-');
+    const plan = etiquetaPlan(o);
+    const esPrev = plan !== 'Correctivo';
     // FIX NaN: subtotal de PostgreSQL llega como string numeric → parseFloat
     const costoRepuestos = (o.repuestos || []).reduce((s, r) => s + (parseFloat(r.subtotal) || (r.cantidad * r.precioUnitario) || 0), 0);
     let html = `<div class="detalle-section"><h4>Datos de la orden</h4>
       <div class="detalle-grid">
         <div class="dg-item"><span class="dg-label">Vehículo</span><span class="dg-val">${o.vehiculo?.placa || '—'}</span></div>
         <div class="dg-item"><span class="dg-label">Técnico</span><span class="dg-val">${o.tecnico?.nombre || '—'}</span></div>
+        <div class="dg-item"><span class="dg-label">Plan</span><span class="dg-val"><span class="badge-plan ${esPrev ? 'preventivo' : 'correctivo'}">${plan}</span></span></div>
         <div class="dg-item"><span class="dg-label">Estado</span><span class="dg-val"><span class="badge-estado ${est}">${o.estado}</span></span></div>
         <div class="dg-item"><span class="dg-label">Apertura</span><span class="dg-val">${fmtFecha(o.fechaApertura)}</span></div>
         <div class="dg-item"><span class="dg-label">Cierre</span><span class="dg-val">${o.fechaCierre ? fmtFecha(o.fechaCierre) : '—'}</span></div>
@@ -706,7 +866,7 @@ function aplicarFiltrosUsr() {
     return true;
   });
 
-  renderTablaUsuarios(res);
+  pagInit('usr', res, renderTablaUsuarios);
   const s = document.getElementById('fu-summary');
   if (s) s.innerHTML = res.length !== usrCache.length
     ? `Mostrando <strong>${res.length}</strong> de ${usrCache.length} usuarios` : '';
@@ -774,6 +934,19 @@ document.getElementById('f-usuario').addEventListener('submit', async e => {
 // ══════════════════════════════════════════════════
 // ALERTAS + FILTROS
 // ══════════════════════════════════════════════════
+function iconAlerta(tipo) {
+  const iconos = {
+    documento_vencido:    '🔴',
+    documento_7dias:      '🟠',
+    documento_15dias:     '🟡',
+    documento_30dias:     '🟡',
+    mantenimiento_vencido:'🔧',
+    mantenimiento_proximo:'🛠️',
+    orden_nueva:          '📋',
+  };
+  return iconos[tipo] || '🔔';
+}
+
 async function cargarAlertas() {
   const c = document.getElementById('alertas-list');
   if (!c) return;
@@ -793,6 +966,10 @@ async function cargarAlertas() {
       } catch { }
     }
     aplicarFiltrosAlertas();
+    // Actualizar el panel de notificaciones con la lista completa
+    if (typeof fcAdminLoadNotifications === 'function') {
+      fcAdminLoadNotifications(alertasCache);
+    }
   } catch (err) {
     c.innerHTML = `<div class="td-loading">Error: ${err.message}</div>`;
   }
@@ -855,32 +1032,50 @@ function setPeriodoRapido(periodo) {
   setPeriodoReporte(periodo, null);
 }
 
-// Llamada desde los botones Hoy / Esta semana / Este mes / Este año
 function setPeriodoReporte(periodo, el) {
-  // Marcar tab activo
   if (el) {
     document.querySelectorAll('#rep-periodo-rapido .ftab').forEach(b => b.classList.remove('active'));
     el.classList.add('active');
   }
+
+  // Personalizado: solo mostrar/ocultar fechas, no lanzar reporte
+  const desdeWrap = document.getElementById('rep-desde-wrap');
+  const hastaWrap = document.getElementById('rep-hasta-wrap');
+  if (periodo === 'personalizado') {
+    if (desdeWrap) desdeWrap.style.display = '';
+    if (hastaWrap) hastaWrap.style.display = '';
+    return;
+  }
+  // En períodos automáticos las fechas siguen visibles (prerellenas)
+  if (desdeWrap) desdeWrap.style.display = '';
+  if (hastaWrap) hastaWrap.style.display = '';
+
   const hoy = new Date();
   const hasta = hoy.toISOString().split('T')[0];
   let desde = '';
-  if (periodo === 'hoy') desde = hasta;
-  else if (periodo === 'semana') {
-    const d = new Date(hoy); d.setDate(d.getDate() - 7);
+
+  if (periodo === 'hoy') {
+    desde = hasta;
+  } else if (periodo === 'semana') {
+    const d = new Date(hoy);
+    const diaSemana = d.getDay();
+    const diasDesdeLunes = diaSemana === 0 ? 6 : diaSemana - 1;
+    d.setDate(d.getDate() - diasDesdeLunes);
     desde = d.toISOString().split('T')[0];
   } else if (periodo === 'mes') {
     desde = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-01`;
   } else if (periodo === 'trimestre') {
-    const d = new Date(hoy); d.setMonth(d.getMonth() - 3);
+    const d = new Date(hoy);
+    d.setMonth(d.getMonth() - 3);
     desde = d.toISOString().split('T')[0];
   } else if (periodo === 'anio') {
     desde = `${hoy.getFullYear()}-01-01`;
   }
+
   if (desde) {
     document.getElementById('rep-desde').value = desde;
     document.getElementById('rep-hasta').value = hasta;
-    cargarReporte(); // disparar el reporte automáticamente
+    cargarReporte();
   }
 }
 
@@ -889,139 +1084,360 @@ function limpiarFiltrosReporte() {
   ['rep-vehiculo', 'rep-tecnico', 'rep-periodo-rapido', 'rep-ord-col'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('metricas-row').style.display = 'none';
   const tb = document.getElementById('tb-rep');
-  if (tb) tb.innerHTML = '<tr><td colspan="7" class="td-loading">Usa los filtros para generar un reporte</td></tr>';
+  if (tb) tb.innerHTML = '<tr><td colspan="9" class="td-loading">Usa los filtros para generar un reporte</td></tr>';
   document.getElementById('rep-sub-filtros').style.display = 'none';
   reporteCache = [];
 }
 
 async function cargarReporte() {
-  const vehiculoId = document.getElementById('rep-vehiculo')?.value || '';
-  const tecnicoId = document.getElementById('rep-tecnico')?.value || '';
   const desde = document.getElementById('rep-desde')?.value || '';
-  const hasta = document.getElementById('rep-hasta')?.value || '';
+  const hasta  = document.getElementById('rep-hasta')?.value  || '';
 
+  // Solo usamos fechas para el fetch (rangos grandes reducen payload)
   let url = '/reportes/costos?';
-  if (vehiculoId) url += `vehiculoId=${vehiculoId}&`;
-  if (tecnicoId) url += `tecnicoId=${tecnicoId}&`;
   if (desde) url += `fechaDesde=${desde}&`;
   if (hasta) url += `fechaHasta=${hasta}&`;
 
   const tb = document.getElementById('tb-rep');
-  tb.innerHTML = '<tr><td colspan="7" class="td-loading">Generando reporte…</td></tr>';
+  tb.innerHTML = '<tr><td colspan="10" class="td-loading">Generando reporte…</td></tr>';
 
   try {
     const { data: d } = await api('GET', url);
-    document.getElementById('metricas-row').style.display = 'grid';
-    document.getElementById('met-total').textContent = `$${fmt(d.metricas.costoTotal)}`;
-    document.getElementById('met-prom').textContent = `$${fmt(d.metricas.costoPromedio)}`;
-    document.getElementById('met-num').textContent = d.metricas.numIntervenciones;
     reporteCache = d.detalle || [];
-    document.getElementById('rep-sub-filtros').style.display = reporteCache.length ? 'flex' : 'none';
-    renderTablaReporte(reporteCache);
+    // Guardamos métricas base para recalcular tras filtros locales
+    window._repMetricasBase = d.metricas;
+    aplicarFiltrosLocales();
   } catch (err) { toast(err.message, 'error'); }
 }
 
-function filtrarResultadosReporte() {
-  const q = (document.getElementById('rep-q')?.value || '').toLowerCase();
-  const res = q ? reporteCache.filter(r =>
-    r.placa.toLowerCase().includes(q) ||
-    r.tecnicoNombre.toLowerCase().includes(q) ||
-    String(r.ordenId).includes(q)) : reporteCache;
-  renderTablaReporte(res);
+function aplicarFiltrosLocales() {
+  const vehiculoId = document.getElementById('rep-vehiculo')?.value || '';
+  const tecnicoId  = document.getElementById('rep-tecnico')?.value  || '';
+  const estado     = document.getElementById('fo-estado-rep')?.value || '';
+  const q          = (document.getElementById('rep-q')?.value || '').toLowerCase();
+
+  let lista = [...reporteCache];
+
+  if (vehiculoId) lista = lista.filter(r => String(r.vehiculoId || r.vehiculo?.id || '') === String(vehiculoId));
+  if (tecnicoId)  lista = lista.filter(r => String(r.tecnicoId  || r.tecnico?.id  || '') === String(tecnicoId));
+  if (estado)     lista = lista.filter(r => (r.estado || '').toLowerCase() === estado.toLowerCase());
+  if (q)          lista = lista.filter(r =>
+    (r.placa || '').toLowerCase().includes(q) ||
+    (r.tecnicoNombre || '').toLowerCase().includes(q) ||
+    String(r.ordenId).includes(q));
+
+  // Ordenar
+  const col = document.getElementById('rep-ord-col')?.value || '';
+  if (col === 'fecha_asc')  lista.sort((a,b) => (a.fechaApertura||'').localeCompare(b.fechaApertura||''));
+  if (col === 'fecha_desc') lista.sort((a,b) => (b.fechaApertura||'').localeCompare(a.fechaApertura||''));
+  if (col === 'costo_asc')  lista.sort((a,b) => a.costoTotal - b.costoTotal);
+  if (col === 'costo_desc') lista.sort((a,b) => b.costoTotal - a.costoTotal);
+
+  // Recalcular métricas sobre la lista filtrada
+  const costoTotal    = lista.reduce((s,r) => s + (r.costoTotal || 0), 0);
+  const costoPromedio = lista.length ? Math.round(costoTotal / lista.length) : 0;
+  const numInter      = lista.length;
+  const ordUnicas     = new Set(lista.map(r => r.ordenId)).size;
+
+  document.getElementById('metricas-row').style.display = lista.length || reporteCache.length ? 'grid' : 'none';
+  document.getElementById('met-total').textContent = `$${fmt(costoTotal)}`;
+  document.getElementById('met-prom').textContent  = `$${fmt(costoPromedio)}`;
+  document.getElementById('met-num').textContent   = numInter;
+  const metOrd = document.getElementById('met-ord');
+  if (metOrd) metOrd.textContent = ordUnicas;
+
+  const tituloTabla = document.getElementById('rep-table-title');
+  if (tituloTabla) tituloTabla.textContent = `Resultados (${lista.length} órdenes)`;
+
   const s = document.getElementById('rep-summary');
-  if (s) s.innerHTML = res.length !== reporteCache.length
-    ? `Mostrando <strong>${res.length}</strong> de ${reporteCache.length}` : '';
+  if (s) s.innerHTML = lista.length !== reporteCache.length && reporteCache.length
+    ? `Mostrando <strong>${lista.length}</strong> de ${reporteCache.length}` : '';
+
+  document.getElementById('rep-sub-filtros').style.display = reporteCache.length ? 'flex' : 'none';
+  renderTablaReporte(lista);
+  renderGraficasReporte(lista);
 }
 
-function ordenarResultadosReporte() {
-  const col = document.getElementById('rep-ord-col')?.value || '';
-  let res = [...reporteCache];
-  if (col === 'fecha_asc') res.sort((a, b) => a.fechaApertura.localeCompare(b.fechaApertura));
-  if (col === 'fecha_desc') res.sort((a, b) => b.fechaApertura.localeCompare(a.fechaApertura));
-  if (col === 'costo_asc') res.sort((a, b) => a.costoTotal - b.costoTotal);
-  if (col === 'costo_desc') res.sort((a, b) => b.costoTotal - a.costoTotal);
-  renderTablaReporte(res);
+function filtrarResultadosReporte() { aplicarFiltrosLocales(); }
+function ordenarResultadosReporte()  { aplicarFiltrosLocales(); }
+
+async function exportarReporteExcel() {
+  // 1. Primero cargar/actualizar datos
+  await cargarReporte();
+
+  const lista = reporteCache;
+  if (!lista || lista.length === 0) {
+    toast('No hay datos para exportar. Aplica un filtro primero.', 'error');
+    return;
+  }
+
+  if (typeof XLSX === 'undefined') {
+    toast('La librería de Excel no está cargada aún. Intenta de nuevo en un momento.', 'error');
+    return;
+  }
+
+  // 2. Construir filas
+  const filas = lista.map(r => ({
+    '# OT':        r.ordenId,
+    'Vehículo':    r.placa || '—',
+    'Técnico':     r.tecnicoNombre || '—',
+    'Apertura':    r.fechaApertura ? new Date(r.fechaApertura).toLocaleDateString('es-CO') : '—',
+    'M. Obra':     r.costoManoObra  || 0,
+    'Repuestos':   r.costoRepuestos || 0,
+    'Total':       r.costoTotal     || 0,
+    'Estado':      r.estado         || '',
+  }));
+
+  // 3. Hoja principal con datos
+  const ws = XLSX.utils.json_to_sheet(filas);
+
+  // Ancho de columnas
+  ws['!cols'] = [
+    { wch: 8 }, { wch: 12 }, { wch: 22 }, { wch: 14 },
+    { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 12 }
+  ];
+
+  // 4. Hoja resumen de métricas
+  const desde  = document.getElementById('rep-desde')?.value || '';
+  const hasta  = document.getElementById('rep-hasta')?.value || '';
+  const costoTotal    = lista.reduce((s, r) => s + (r.costoTotal || 0), 0);
+  const costoPromedio = lista.length ? Math.round(costoTotal / lista.length) : 0;
+  const resumen = [
+    { Métrica: 'Período desde', Valor: desde || 'Todos' },
+    { Métrica: 'Período hasta', Valor: hasta  || 'Todos' },
+    { Métrica: 'Total costos',  Valor: costoTotal },
+    { Métrica: 'Costo promedio',Valor: costoPromedio },
+    { Métrica: 'Intervenciones',Valor: lista.length },
+    { Métrica: 'Órdenes únicas',Valor: new Set(lista.map(r => r.ordenId)).size },
+  ];
+  const wsRes = XLSX.utils.json_to_sheet(resumen);
+  wsRes['!cols'] = [{ wch: 20 }, { wch: 18 }];
+
+  // 5. Workbook y descarga
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws,    'Detalle');
+  XLSX.utils.book_append_sheet(wb, wsRes, 'Resumen');
+
+  const fecha = new Date().toISOString().split('T')[0];
+  XLSX.writeFile(wb, `reporte-costos-${fecha}.xlsx`);
+  toast('Excel generado correctamente', 'success');
 }
 
 function renderTablaReporte(lista) {
+  pagInit('rep', lista, _renderFilasReporte, 10);
+}
+
+function _renderFilasReporte(slice) {
   const tb = document.getElementById('tb-rep');
   if (!tb) return;
-  tb.innerHTML = lista.length
-    ? lista.map(r => `<tr>
-        <td><strong>#${r.ordenId}</strong><br><span style="font-size:11px;color:var(--text-lt)">${(r.repuestos || []).length} rep. · ${r.fotosTotal || 0} fotos</span></td><td>${r.placa}</td><td>${r.tecnicoNombre}</td>
+  tb.innerHTML = slice.length
+    ? slice.map(r => `<tr>
+        <td><strong>#${r.ordenId}</strong></td>
+        <td><strong>${r.placa}</strong></td>
+        <td>${r.tecnicoNombre}</td>
         <td>${fmtFecha(r.fechaApertura)}</td>
-        <td>$${fmt(r.costoManoObra)}</td><td>$${fmt(r.costoRepuestos)}</td>
-        <td><strong>$${fmt(r.costoTotal)}</strong><br><button class="btn-ghost btn-sm" style="margin-top:4px" onclick="abrirDetalleOrden(${r.ordenId})">Ver detalle</button></td>
+        <td>$${fmt(r.costoManoObra)}</td>
+        <td>$${fmt(r.costoRepuestos)}</td>
+        <td><strong>$${fmt(r.costoTotal)}</strong></td>
+        <td>${r.estado ? `<span class="badge-estado ${r.estado==='Cerrada'?'cerrada':r.estado==='Abierta'?'abierta':r.estado==='Cancelada'?'cancelada':'en-proceso'}">${r.estado}</span>` : ''}</td>
+        <td><button class="btn-ghost btn-sm" onclick="abrirDetalleOrden(${r.ordenId})">Ver detalle</button></td>
       </tr>`).join('')
-    : '<tr><td colspan="7" class="td-loading">Sin resultados</td></tr>';
+    : '<tr><td colspan="9" class="td-loading">Sin resultados</td></tr>';
 }
 
-// ══════════════════════════════════════════════════
-// RANKING + FILTROS LOCALES
-// ══════════════════════════════════════════════════
-async function cargarRanking() {
-  const periodo = document.getElementById('ranking-periodo')?.value || 'mes';
-  const tb = document.getElementById('tb-rank');
-  if (!tb) return;
-  tb.innerHTML = '<tr><td colspan="6" class="td-loading">Cargando ranking…</td></tr>';
-  try {
-    const { data } = await api('GET', `/salud-financiera/ranking?periodo=${periodo}`);
-    rankingCache = data || [];
-    filtrarRankingLocal();
-  } catch (err) {
-    tb.innerHTML = `<tr><td colspan="6" class="td-loading">Error: ${err.message}</td></tr>`;
+// ── Gráficas de reportes ───────────────────────────
+let _repChartVeh = null;
+let _repChartTiempo = null;
+let _repChartDist = null;
+
+function renderGraficasReporte(lista) {
+  const seccion = document.getElementById('rep-charts-section');
+  if (!lista || lista.length === 0) {
+    if (seccion) seccion.style.display = 'none';
+    return;
   }
-}
+  if (seccion) seccion.style.display = 'block';
 
-function filtrarRankingLocal() {
-  const q = (document.getElementById('fr-q')?.value || '').toLowerCase();
-  const color = document.getElementById('fr-color')?.value || '';
-  const minInt = +document.getElementById('fr-min-int')?.value || 0;
-  const minCost = +document.getElementById('fr-min-costo')?.value || 0;
-  const orden = document.getElementById('fr-orden')?.value || 'costo_desc';
+  // ── Gráfica 1: Costo por vehículo (barras) ────────
+  const mapaVeh = {};
+  lista.forEach(r => {
+    const key = r.placa || 'Sin placa';
+    mapaVeh[key] = (mapaVeh[key] || 0) + (r.costoTotal || 0);
+  });
+  const vehEntradas = Object.entries(mapaVeh).sort((a,b) => b[1] - a[1]).slice(0, 12);
+  const vehLabels = vehEntradas.map(e => e[0]);
+  const vehValues = vehEntradas.map(e => e[1]);
 
-  let res = [...rankingCache];
-  if (q) res = res.filter(r => `${r.placa} ${r.marca} ${r.modelo}`.toLowerCase().includes(q));
-  if (color) res = res.filter(r => r.codigoColor === color);
-  if (minInt) res = res.filter(r => r.intervenciones >= minInt);
-  if (minCost) res = res.filter(r => r.costoTotal >= minCost);
+  const ctxVeh = document.getElementById('rep-chart-vehiculo');
+  if (ctxVeh) {
+    if (_repChartVeh) { _repChartVeh.destroy(); _repChartVeh = null; }
+    const palette = ['#1a56db','#3b82f6','#60a5fa','#93c5fd','#0b1f45','#0f2857',
+                     '#10b981','#34d399','#f59e0b','#ef4444','#8b5cf6','#ec4899'];
+    _repChartVeh = new Chart(ctxVeh, {
+      type: 'bar',
+      data: {
+        labels: vehLabels,
+        datasets: [{
+          data: vehValues,
+          backgroundColor: vehLabels.map((_, i) => palette[i % palette.length] + 'cc'),
+          borderColor:     vehLabels.map((_, i) => palette[i % palette.length]),
+          borderWidth: 1.5,
+          borderRadius: 6,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0b1f45', padding: 10,
+            callbacks: { label: c => '  $ ' + c.parsed.y.toLocaleString('es-CO') }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, border: { display: false },
+               ticks: { font: { family: 'Outfit', size: 11 }, color: '#9ca3af', maxRotation: 35 } },
+          y: { grid: { color: '#f0f2f7' }, border: { display: false },
+               ticks: { font: { family: 'Outfit', size: 11 }, color: '#9ca3af',
+                        callback: v => v >= 1000000 ? '$'+(v/1000000).toFixed(1)+'M' : v >= 1000 ? '$'+(v/1000).toFixed(0)+'K' : '$'+v } }
+        }
+      }
+    });
+  }
 
-  if (orden === 'costo_asc') res.sort((a, b) => a.costoTotal - b.costoTotal);
-  if (orden === 'costo_desc') res.sort((a, b) => b.costoTotal - a.costoTotal);
-  if (orden === 'int_asc') res.sort((a, b) => a.intervenciones - b.intervenciones);
-  if (orden === 'int_desc') res.sort((a, b) => b.intervenciones - a.intervenciones);
+  // ── Gráfica 2: Evolución de costos en el tiempo ───
+  const fechas = lista.map(r => r.fechaApertura).filter(Boolean).sort();
+  const primerFecha = new Date(fechas[0]);
+  const ultimaFecha = new Date(fechas[fechas.length - 1]);
+  const diffDias = (ultimaFecha - primerFecha) / 86400000;
+  const agruparPor = diffDias <= 60 ? 'semana' : 'mes';
 
-  const s = document.getElementById('fr-summary');
-  if (s) s.innerHTML = res.length !== rankingCache.length
-    ? `Mostrando <strong>${res.length}</strong> de ${rankingCache.length} vehículos` : '';
+  const mapaTiempo = {};
+  lista.forEach(r => {
+    if (!r.fechaApertura) return;
+    const d = new Date(r.fechaApertura);
+    let key;
+    if (agruparPor === 'semana') {
+      const dia = d.getDay();
+      const lunes = new Date(d);
+      lunes.setDate(d.getDate() - (dia === 0 ? 6 : dia - 1));
+      key = lunes.toISOString().split('T')[0];
+    } else {
+      key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+    }
+    mapaTiempo[key] = (mapaTiempo[key] || 0) + (r.costoTotal || 0);
+  });
+  const tiempoEntradas = Object.entries(mapaTiempo).sort((a,b) => a[0].localeCompare(b[0]));
+  const tiempoLabels = tiempoEntradas.map(e => {
+    if (agruparPor === 'mes') {
+      const [y, m] = e[0].split('-');
+      return ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'][+m-1] + ' ' + y.slice(2);
+    }
+    return e[0].slice(5);
+  });
+  const tiempoValues = tiempoEntradas.map(e => e[1]);
 
-  renderTablaRanking(res);
-}
+  const ctxTiempo = document.getElementById('rep-chart-tiempo');
+  if (ctxTiempo) {
+    if (_repChartTiempo) { _repChartTiempo.destroy(); _repChartTiempo = null; }
+    const gradCtx2 = ctxTiempo.getContext('2d');
+    const grad2 = gradCtx2.createLinearGradient(0, 0, 0, 240);
+    grad2.addColorStop(0, 'rgba(16,185,129,0.22)');
+    grad2.addColorStop(1, 'rgba(16,185,129,0.00)');
+    _repChartTiempo = new Chart(ctxTiempo, {
+      type: 'line',
+      data: {
+        labels: tiempoLabels,
+        datasets: [{
+          data: tiempoValues,
+          borderColor: '#10b981',
+          borderWidth: 2.5,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: '#10b981',
+          pointBorderWidth: 2,
+          pointRadius: 4, pointHoverRadius: 6,
+          fill: true, backgroundColor: grad2, tension: 0.4
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0b1f45', padding: 10,
+            callbacks: { label: c => '  $ ' + c.parsed.y.toLocaleString('es-CO') }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, border: { display: false },
+               ticks: { font: { family: 'Outfit', size: 11 }, color: '#9ca3af' } },
+          y: { grid: { color: '#f0f2f7' }, border: { display: false },
+               ticks: { font: { family: 'Outfit', size: 11 }, color: '#9ca3af',
+                        callback: v => v >= 1000000 ? '$'+(v/1000000).toFixed(1)+'M' : v >= 1000 ? '$'+(v/1000).toFixed(0)+'K' : '$'+v } }
+        }
+      }
+    });
+  }
 
-function limpiarFiltrosRanking() {
-  ['fr-q', 'fr-min-int', 'fr-min-costo'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  ['fr-color'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  const ord = document.getElementById('fr-orden'); if (ord) ord.value = 'costo_desc';
-  filtrarRankingLocal();
-}
+  // ── Gráfica 3: Distribución de costos (donut) ────
+  const totalMO  = lista.reduce((s, r) => s + (r.costoManoObra  || 0), 0);
+  const totalRep = lista.reduce((s, r) => s + (r.costoRepuestos || 0), 0);
+  const totalOtr = lista.reduce((s, r) => s + (r.costoOtros     || 0), 0);
+  const totalServ = lista.reduce((s, r) => s + (r.costoServicio  || 0), 0);
+  const totalDist = totalMO + totalRep + totalOtr + totalServ || 1;
 
-function renderTablaRanking(lista) {
-  const tb = document.getElementById('tb-rank');
-  if (!tb) return;
-  if (!lista.length) { tb.innerHTML = '<tr><td colspan="5" class="td-loading">Sin resultados con estos filtros</td></tr>'; return; }
-  const colores = {
-    verde: 'background:rgba(34,192,122,.12);color:#15a362',
-    amarillo: 'background:rgba(240,201,74,.15);color:#a07a00',
-    rojo: 'background:rgba(232,74,58,.12);color:#c23228',
-  };
-  tb.innerHTML = lista.map((r, idx) => `<tr>
-    <td><strong>#${idx + 1}</strong>${r.nuevoTop ? ' <span style="font-size:10px;color:var(--orange);font-weight:700">NUEVO TOP</span>' : ''}</td>
-    <td><strong>${r.placa}</strong><br><span style="font-size:12px;color:var(--text-lt)">${r.marca} ${r.modelo}</span></td>
-    <td>${r.intervenciones}</td>
-    <td><strong>$${fmt(r.costoTotal)}</strong></td>
+  const distCats = [
+    { label: 'Repuestos',   value: totalRep,  color: '#1a56db' },
+    { label: 'Mano de obra',value: totalMO,   color: '#f97316' },
+    { label: 'Servicios',   value: totalServ, color: '#10b981' },
+    { label: 'Otros',       value: totalOtr,  color: '#8b5cf6' },
+  ].filter(c => c.value > 0);
 
-    <td><span style="padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;${colores[r.codigoColor] || ''}">
-      ${r.codigoColor}</span></td></tr>`).join('');
+  const ctxDist = document.getElementById('rep-chart-dist');
+  const legendEl = document.getElementById('rep-donut-legend');
+  if (ctxDist) {
+    if (_repChartDist) { _repChartDist.destroy(); _repChartDist = null; }
+    _repChartDist = new Chart(ctxDist, {
+      type: 'doughnut',
+      data: {
+        labels: distCats.map(c => c.label),
+        datasets: [{
+          data: distCats.map(c => c.value),
+          backgroundColor: distCats.map(c => c.color),
+          borderWidth: 0,
+          hoverOffset: 6,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        cutout: '68%',
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#0b1f45', padding: 10,
+            callbacks: {
+              label: c => {
+                const pct = ((c.parsed / totalDist) * 100).toFixed(1);
+                return `  ${c.label}: $${c.parsed.toLocaleString('es-CO')} (${pct}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+  if (legendEl) {
+    legendEl.innerHTML = distCats.map(c => {
+      const pct  = Math.round((c.value / totalDist) * 100);
+      const amt  = '$' + c.value.toLocaleString('es-CO');
+      return `<li class="rep-donut-item">
+        <span class="rep-donut-dot" style="background:${c.color}"></span>
+        <span class="rep-donut-label">${c.label}</span>
+        <span class="rep-donut-pct">${pct}%</span>
+        <span class="rep-donut-amt">${amt}</span>
+      </li>`;
+    }).join('');
+  }
 }
 
 // ══════════════════════════════════════════════════
@@ -1033,7 +1449,7 @@ async function cargarAsignaciones() {
   try {
     const res = await api('GET', '/asignaciones');
     asigCache = Array.isArray(res) ? res : (res?.data || []);
-    renderTablaAsignaciones(asigCache);
+    pagInit('asig', asigCache, _renderRowsAsig);
     poblarSelectsAsignacion();
   } catch (err) {
     if (tb) tb.innerHTML = `<tr><td colspan="7" class="td-loading" style="color:var(--red)">Error: ${err.message}</td></tr>`;
@@ -1054,10 +1470,12 @@ function filtrarAsignaciones(q) {
     if (desde && a.fechaInicio < desde) return false;
     return true;
   });
-  renderTablaAsignaciones(res);
+  pagInit('asig', res, _renderRowsAsig);
 }
 
-function renderTablaAsignaciones(lista) {
+function renderTablaAsignaciones(lista) { pagInit('asig', lista, _renderRowsAsig); }
+
+function _renderRowsAsig(lista) {
   const tb = document.getElementById('tb-asig');
   if (!tb) return;
   tb.innerHTML = lista.length ? lista.map(a => `<tr>
@@ -1436,7 +1854,7 @@ function filtrarPlanes() {
     return (p.nombre || '').toLowerCase().includes(buscar) ||
       (p._placa || p.vehiculo?.placa || '').toLowerCase().includes(buscar);
   });
-  renderTablaPlanes(lista);
+  pagInit('plan', lista, renderTablaPlanes);
 }
 
 function renderTablaPlanes(lista) {
@@ -1541,6 +1959,7 @@ showPage = function (id, title) {
   if (id === 'predicciones') cargarPredicciones();
   if (id === 'umbrales') { cargarUmbrales(); poblarSelectUmbralVehiculos(); }
   if (id === 'planes') { poblarSelectsPlanes(); cargarPlanes(); }
+  if (id === 'novedades') { setTimeout(function(){ if (typeof initAdminNovedades === 'function') initAdminNovedades(); }, 150); }
 };
 // (popup de alertas urgentes movido a notifications.js → fcMostrarPopupUrgentes)
 
@@ -1828,4 +2247,309 @@ async function abrirDrawerEditarAsignacion(id) {
   } catch (err) {
     toast('Error al cargar datos de la asignación: ' + err.message, 'error');
   }
+}
+// ═══════════════════════════════════════════════════════════════════════════
+// GALERÍA DE VEHÍCULOS
+// ═══════════════════════════════════════════════════════════════════════════
+let galeriaCache = [];
+
+async function cargarGaleria() {
+  const grid = document.getElementById('galeria-vehiculos');
+  if (!grid) return;
+  grid.innerHTML = '<div class="td-loading">Cargando galería…</div>';
+  try {
+    // Asegurar vehículos y órdenes en cache
+    let vehs = vehCache.length ? vehCache : [];
+    if (!vehs.length) {
+      const r = await api('GET', '/vehiculos');
+      vehs = Array.isArray(r) ? r : (r.data || []);
+    }
+    if (!ordCache.length) await cargarOrdenes();
+
+    galeriaCache = vehs.map(v => {
+      // BUG FIX: filtrar por vehiculo.id OR vehiculoId correctamente
+      const ords = ordCache.filter(o =>
+        (o.vehiculo?.id ?? o.vehiculoId) === v.id
+      );
+      const fechaUltima = ords.length
+        ? ords.map(o => o.fechaApertura).sort().slice(-1)[0]
+        : null;
+      return {
+        vehiculoId: v.id,
+        placa:  v.placa,
+        marca:  v.marca,
+        modelo: v.modelo,
+        anio:   v.anio,
+        ordIds: ords.map(o => o.id),
+        fechaUltima,
+      };
+    })
+    // Solo mostrar vehículos que tienen al menos 1 orden
+    .filter(v => v.ordIds.length > 0);
+
+    if (!galeriaCache.length) {
+      grid.innerHTML = '<div class="td-loading">No hay vehículos con reparaciones registradas</div>';
+      return;
+    }
+
+    filtrarGaleria();
+    initParticles();
+    _cargarConteoFotosGaleria();
+  } catch(err) {
+    grid.innerHTML = '<div class="td-loading" style="color:var(--red)">Error: ' + err.message + '</div>';
+  }
+}
+
+// Carga en 2do plano el conteo de fotos por vehículo (no bloquea el render inicial)
+async function _cargarConteoFotosGaleria() {
+  const resultados = await Promise.allSettled(
+    galeriaCache.map(async v => {
+      const counts = await Promise.allSettled(
+        v.ordIds.map(id => api('GET', '/ordenes/' + id + '/fotos').then(r => (r?.data ?? r)?.total ?? 0))
+      );
+      const total = counts.reduce((s, c) => s + (c.status === 'fulfilled' ? c.value : 0), 0);
+      return { vehiculoId: v.vehiculoId, total };
+    })
+  );
+  resultados.forEach(r => {
+    if (r.status !== 'fulfilled') return;
+    const v = galeriaCache.find(x => x.vehiculoId === r.value.vehiculoId);
+    if (v) v.totalFotos = r.value.total;
+  });
+  // Re-render solo si seguimos en la página de galería
+  const tbody = document.querySelector('#galeria-vehiculos .gal-table tbody');
+  if (tbody) filtrarGaleria();
+}
+
+function filtrarGaleria() {
+  const q     = (document.getElementById('gal-search')?.value || '').toLowerCase();
+  const desde = document.getElementById('gal-desde')?.value || '';
+  const hasta = document.getElementById('gal-hasta')?.value || '';
+
+  let lista = galeriaCache;
+  if (q) lista = lista.filter(v =>
+    v.placa.toLowerCase().includes(q) ||
+    (v.marca + ' ' + v.modelo).toLowerCase().includes(q)
+  );
+  if (desde) lista = lista.filter(v => v.fechaUltima && v.fechaUltima.slice(0, 10) >= desde);
+  if (hasta) lista = lista.filter(v => v.fechaUltima && v.fechaUltima.slice(0, 10) <= hasta);
+
+  const counter = document.getElementById('gal-counter');
+  if (counter) counter.textContent = lista.length + ' vehículo' + (lista.length !== 1 ? 's' : '');
+  pagInit('gal', lista, renderGaleria, 12);
+}
+
+// Llamado por los inputs Desde/Hasta del hero de Galería
+function checkAutoFilterGaleria() { filtrarGaleria(); }
+
+function limpiarFiltrosGaleria() {
+  const s = document.getElementById('gal-search');
+  const d = document.getElementById('gal-desde');
+  const h = document.getElementById('gal-hasta');
+  if (s) s.value = '';
+  if (d) d.value = '';
+  if (h) h.value = '';
+  filtrarGaleria();
+}
+
+function renderGaleria(lista) {
+  const grid = document.getElementById('galeria-vehiculos');
+  if (!grid) return;
+  if (!lista.length) {
+    grid.innerHTML = '<div class="td-loading">Sin vehículos encontrados</div>';
+    return;
+  }
+  grid.innerHTML = `
+    <table class="data-table gal-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Vehículo</th>
+          <th>Placa</th>
+          <th>Última reparación</th>
+          <th>Reparaciones</th>
+          <th>Fotos</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${lista.map((v, i) => {
+          const reps = v.ordIds.length;
+          return `
+          <tr class="gal-veh-card" style="animation-delay:${i * 0.04}s"
+              onclick="abrirGaleriaVehiculo(${v.vehiculoId},'${v.placa}','${v.marca} ${v.modelo} ${v.anio}')">
+            <td class="gal-veh-chevron"><i class="fa-solid fa-truck"></i></td>
+            <td><span class="gal-veh-placa">${v.marca} ${v.modelo} ${v.anio}</span></td>
+            <td><span class="gal-veh-name">${v.placa}</span></td>
+            <td>${v.fechaUltima ? fmtFecha(v.fechaUltima) : '—'}</td>
+            <td>${reps}</td>
+            <td>${v.totalFotos ?? '—'}</td>
+            <td><button class="btn-outline btn-sm" onclick="event.stopPropagation();abrirGaleriaVehiculo(${v.vehiculoId},'${v.placa}','${v.marca} ${v.modelo} ${v.anio}')">Ver</button></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.1 });
+  grid.querySelectorAll('.gal-veh-card').forEach(c => obs.observe(c));
+}
+
+let mgalvCache = []; // todas las órdenes con fotos del vehículo abierto en el modal
+
+async function abrirGaleriaVehiculo(vehiculoId, placa, nombre) {
+  const modal = document.getElementById('m-galeria-veh');
+  if (!modal) return;
+  document.getElementById('mgalv-title').textContent = placa + ' · ' + nombre;
+  const body = document.getElementById('mgalv-body');
+  body.innerHTML = '<div class="td-loading">Cargando fotos…</div>';
+  modal.style.display = 'flex';
+  requestAnimationFrame(() => modal.classList.add('open'));
+
+  // Reiniciar filtros de fecha del modal cada vez que se abre un vehículo nuevo
+  const dDesde = document.getElementById('mgalv-desde');
+  const dHasta = document.getElementById('mgalv-hasta');
+  if (dDesde) dDesde.value = '';
+  if (dHasta) dHasta.value = '';
+
+  try {
+    // Filtrado robusto igual que en cargarGaleria
+    const ords = ordCache.filter(o =>
+      (o.vehiculo?.id ?? o.vehiculoId) === vehiculoId
+    );
+    if (!ords.length) {
+      mgalvCache = [];
+      body.innerHTML = '<div class="td-loading">Sin órdenes de reparación para este vehículo</div>';
+      return;
+    }
+
+    const fotosResultados = await Promise.allSettled(
+      ords.map(o =>
+        api('GET', '/ordenes/' + o.id + '/fotos')
+          .then(r => ({ ordenId: o.id, fecha: o.fechaApertura, data: r?.data ?? r }))
+      )
+    );
+
+    mgalvCache = fotosResultados
+      .filter(r => r.status === 'fulfilled' && (r.value.data?.total ?? 0) > 0)
+      .map(r => r.value);
+
+    renderModalGaleria(mgalvCache);
+  } catch (err) {
+    mgalvCache = [];
+    body.innerHTML = `<div class="td-loading" style="color:var(--red)">Error: ${err.message}</div>`;
+  }
+}
+
+// Aplica el rango Desde/Hasta sobre mgalvCache y vuelve a pintar
+function checkAutoFilterModalGaleria() {
+  const desde = document.getElementById('mgalv-desde')?.value || '';
+  const hasta = document.getElementById('mgalv-hasta')?.value || '';
+
+  let lista = mgalvCache;
+  if (desde) lista = lista.filter(item => item.fecha && item.fecha.slice(0, 10) >= desde);
+  if (hasta) lista = lista.filter(item => item.fecha && item.fecha.slice(0, 10) <= hasta);
+
+  renderModalGaleria(lista);
+}
+
+function limpiarFiltrosModalGaleria() {
+  const d = document.getElementById('mgalv-desde');
+  const h = document.getElementById('mgalv-hasta');
+  if (d) d.value = '';
+  if (h) h.value = '';
+  renderModalGaleria(mgalvCache);
+}
+
+function renderModalGaleria(conFotos) {
+  const body = document.getElementById('mgalv-body');
+  if (!body) return;
+
+  if (!mgalvCache.length) {
+    body.innerHTML = '<div class="td-loading"><i class="fa-solid fa-camera" style="margin-right:6px"></i>Sin fotos registradas para este vehículo</div>';
+    return;
+  }
+  if (!conFotos.length) {
+    body.innerHTML = '<div class="td-loading"><i class="fa-solid fa-calendar-xmark" style="margin-right:6px"></i>Sin reparaciones en ese rango de fechas</div>';
+    return;
+  }
+
+  try {
+
+    body.innerHTML = conFotos.map((item, i) => {
+      const antes   = item.data.antes   || [];
+      const despues = item.data.despues || [];
+      const fotoHtml = (arr, alt) => arr.length
+        ? arr.map(f => `
+          <div class="ba-foto-wrap" onclick="abrirFoto('${apiAssetUrl(f.url)}')">
+            <img src="${apiAssetUrl(f.url)}" alt="${alt}"
+                 onerror="this.parentElement.style.display='none'"/>
+            <div class="ba-foto-overlay">
+              <svg viewBox="0 0 24 24" width="20" height="20">
+                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+              </svg>
+            </div>
+          </div>`).join('')
+        : '<div class="ba-empty">Sin fotos</div>';
+
+      // Datos de la orden ya disponibles en cache global de órdenes
+      const ord = ordCache.find(o => o.id === item.ordenId) || {};
+      const est = (ord.estado || '').toLowerCase().replace(' ', '-');
+
+      return `
+      <div class="ba-orden-block" style="animation-delay:${i * 0.1}s">
+        <div class="ba-orden-hdr">
+          <div class="ba-orden-num">Orden #${item.ordenId}</div>
+          <div class="ba-orden-fecha">${fmtFecha(item.fecha)}</div>
+          <div class="ba-orden-count">${antes.length + despues.length} foto${antes.length + despues.length !== 1 ? 's' : ''}</div>
+        </div>
+        <div class="ba-orden-split">
+          <div class="ba-orden-left">
+            <div class="ba-info-title">Información de la reparación</div>
+            <div class="ba-info-item"><span class="ba-info-label">Técnico</span><span class="ba-info-val">${ord.tecnico?.nombre || '—'}</span></div>
+            <div class="ba-info-item"><span class="ba-info-label">Estado</span><span class="ba-info-val"><span class="badge-estado ${est}">${ord.estado || '—'}</span></span></div>
+            <div class="ba-info-item ba-info-desc"><span class="ba-info-label">Descripción</span><span class="ba-info-val">${ord.descripcion || '—'}</span></div>
+          </div>
+          <div class="ba-orden-right">
+            <div class="ba-cols">
+              <div class="ba-col">
+                <div class="ba-col-label antes">Antes de la reparación</div>
+                <div class="ba-fotos-grid">${fotoHtml(antes, 'Antes')}</div>
+              </div>
+              <div class="ba-divider">
+                <div class="ba-divider-line"></div>
+                <div class="ba-divider-icon">→</div>
+                <div class="ba-divider-line"></div>
+              </div>
+              <div class="ba-col">
+                <div class="ba-col-label despues">Después de la reparación</div>
+                <div class="ba-fotos-grid">${fotoHtml(despues, 'Después')}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const obs = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
+      });
+    }, { threshold: 0.05 });
+    document.querySelectorAll('.ba-orden-block').forEach(b => obs.observe(b));
+
+  } catch(err) {
+    body.innerHTML = '<div class="td-loading" style="color:var(--red)">Error: ' + err.message + '</div>';
+  }
+}
+
+function initParticles() {
+  const c = document.getElementById('gal-particles');
+  if (!c) return;
+  c.innerHTML = Array.from({length: 18}, (_, i) =>
+    `<div class="particle" style="left:${Math.random()*100}%;top:${Math.random()*100}%;animation-delay:${Math.random()*4}s;animation-duration:${3+Math.random()*4}s;width:${3+Math.random()*5}px;height:${3+Math.random()*5}px;opacity:${0.1+Math.random()*0.3}"></div>`
+  ).join('');
 }
