@@ -288,38 +288,44 @@
 
 
 
-  <!-- MARQUEE -->
-
+  <!-- BARRA INFERIOR DEL HERO — ACCESOS RÁPIDOS CON CIRCULOS E ICONOS -->
   <div class="marquee-strip">
+    <div class="hero-quick-access">
+      <div class="quick-item">
+        <div class="quick-badge">
+          <i class="fa-solid fa-map-location-dot"></i>
+        </div>
+        <span class="quick-label">Cobertura Departamental</span>
+      </div>
 
-    <div class="marquee-inner">
+      <div class="quick-item">
+        <div class="quick-badge">
+          <i class="fa-solid fa-bus-simple"></i>
+        </div>
+        <span class="quick-label">Flota del Huila</span>
+      </div>
 
-      <span><i class="fa-solid fa-bus-simple"></i> Flota del Huila</span>
+      <div class="quick-item">
+        <div class="quick-badge">
+          <i class="fa-solid fa-screwdriver-wrench"></i>
+        </div>
+        <span class="quick-label">Mantenimiento Predictivo</span>
+      </div>
 
-      <span><i class="fa-solid fa-screwdriver-wrench"></i> Mantenimiento Predictivo</span>
+      <div class="quick-item">
+        <div class="quick-badge">
+          <i class="fa-solid fa-chart-line"></i>
+        </div>
+        <span class="quick-label">Reportes en Tiempo Real</span>
+      </div>
 
-      <span><i class="fa-solid fa-chart-line"></i> Reportes en Tiempo Real</span>
-
-      <span><i class="fa-solid fa-traffic-light"></i> Semáforo de Estado</span>
-
-      <span><i class="fa-solid fa-brain"></i> Inteligencia Artificial</span>
-
-      <span><i class="fa-solid fa-map-location-dot"></i> Cobertura Departamental</span>
-
-      <span><i class="fa-solid fa-bus-simple"></i> Flota del Huila</span>
-
-      <span><i class="fa-solid fa-screwdriver-wrench"></i> Mantenimiento Predictivo</span>
-
-      <span><i class="fa-solid fa-chart-line"></i> Reportes en Tiempo Real</span>
-
-      <span><i class="fa-solid fa-traffic-light"></i> Semáforo de Estado</span>
-
-      <span><i class="fa-solid fa-brain"></i> Inteligencia Artificial</span>
-
-      <span><i class="fa-solid fa-map-location-dot"></i> Cobertura Departamental</span>
-
+      <div class="quick-item">
+        <div class="quick-badge">
+          <i class="fa-solid fa-traffic-light"></i>
+        </div>
+        <span class="quick-label">Semáforo de Estado</span>
+      </div>
     </div>
-
   </div>
 
 
@@ -343,242 +349,254 @@
 
 
 
-      <!-- NUEVA ESTRUCTURA DE CARDS — reemplaza toda la .feat-grid -->
+       <div class="cflow-carousel-container">
 
-      <div class="feat-grid">
+        <div class="cflow-viewport">
+
+          <button class="cflow-nav-btn cflow-prev" id="cflowPrev" aria-label="Anterior">
+            <i class="fa-solid fa-chevron-left"></i>
+          </button>
+
+          <div class="cflow-track" id="cflowTrack">
+
+            <div class="mod-card js-reveal" style="--reveal-delay:0s;--card-color:#2a7fd4">
+
+              <div class="mod-card-bg"></div>
+
+              <div class="mod-img-float">
+
+                <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&q=85" alt="Dashboard" />
+
+                <div class="mod-img-ring"></div>
+
+              </div>
+
+              <div class="mod-provider">
+
+                <span class="mod-dot" style="background:#22c07a"></span>
+
+                FlotaControl 360 &nbsp;·&nbsp; <i class="fa-solid fa-circle-check" style="color:#22c07a"></i>
+
+              </div>
+
+              <h3 class="mod-title">Dashboard</h3>
+
+              <div class="mod-meta">
+
+                <div class="mod-stat"><span class="mod-stat-val">12</span><span class="mod-stat-lbl">vehículos</span></div>
+
+                <div class="mod-divv"></div>
+
+                <div class="mod-stat"><span class="mod-stat-val">3</span><span class="mod-stat-lbl">alertas</span></div>
+
+              </div>
+
+              <div class="mod-bottom">
+
+                <span class="mod-tag"><i class="fa-solid fa-bolt"></i> Tiempo real</span>
+
+                <button class="mod-btn">Ver <i class="fa-solid fa-arrow-right"></i></button>
+
+              </div>
+
+            </div>
 
 
 
-        <div class="mod-card js-reveal" style="--reveal-delay:0s;--card-color:#2a7fd4">
+            <div class="mod-card js-reveal" style="--reveal-delay:.09s;--card-color:#c07040">
 
-          <div class="mod-card-bg"></div>
+              <div class="mod-card-bg" style="--bg1:rgba(192,112,64,.18);--bg2:rgba(192,112,64,.06)"></div>
 
-          <div class="mod-img-float">
+              <div class="mod-img-float">
 
-            <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&q=85" alt="Dashboard" />
+                <img src="../assets/img/mantenimiento.jpg" alt="Mantenimiento" />
 
-            <div class="mod-img-ring"></div>
+                <div class="mod-img-ring" style="--ring:rgba(192,112,64,.4)"></div>
+
+              </div>
+
+              <div class="mod-provider">
+
+                <span class="mod-dot" style="background:#c07040"></span>
+
+                Preventivo &nbsp;·&nbsp; <i class="fa-solid fa-clock" style="color:#c07040"></i>
+
+              </div>
+
+              <h3 class="mod-title">Mantenimiento</h3>
+
+              <div class="mod-meta">
+
+                <div class="mod-stat"><span class="mod-stat-val">5</span><span class="mod-stat-lbl">planes</span></div>
+
+                <div class="mod-divv"></div>
+
+                <div class="mod-stat"><span class="mod-stat-val">km+d</span><span class="mod-stat-lbl">criterio</span></div>
+
+              </div>
+
+              <div class="mod-bottom">
+
+                <span class="mod-tag"
+                  style="background:rgba(192,112,64,.12);border-color:rgba(192,112,64,.28);color:#c07040"><i
+                    class="fa-solid fa-bell"></i> Auto-alertas</span>
+
+                <button class="mod-btn" style="--btn:#c07040">Ver <i class="fa-solid fa-arrow-right"></i></button>
+
+              </div>
+
+            </div>
+
+
+
+            <div class="mod-card js-reveal" style="--reveal-delay:.18s;--card-color:#1aaa6a">
+
+              <div class="mod-card-bg" style="--bg1:rgba(26,170,106,.16);--bg2:rgba(26,170,106,.05)"></div>
+
+              <div class="mod-img-float">
+
+                <img src="../assets/img/alerta.jpg" alt="Alertas" />
+
+                <div class="mod-img-ring" style="--ring:rgba(26,170,106,.45)"></div>
+
+              </div>
+
+              <div class="mod-provider">
+
+                <span class="mod-dot" style="background:#1aaa6a"></span>
+
+                SOAT &amp; RTM &nbsp;·&nbsp; <i class="fa-solid fa-shield-check" style="color:#1aaa6a"></i>
+
+              </div>
+
+              <h3 class="mod-title">Alertas</h3>
+
+              <div class="mod-meta">
+
+                <div class="mod-stat"><span class="mod-stat-val">24/7</span><span class="mod-stat-lbl">activas</span></div>
+
+                <div class="mod-divv"></div>
+
+                <div class="mod-stat"><span class="mod-stat-val">0</span><span class="mod-stat-lbl">perdidas</span></div>
+
+              </div>
+
+              <div class="mod-bottom">
+
+                <span class="mod-tag"
+                  style="background:rgba(26,170,106,.1);border-color:rgba(26,170,106,.26);color:#1aaa6a"><i
+                    class="fa-solid fa-envelope"></i> Notificaciones</span>
+
+                <button class="mod-btn" style="--btn:#1aaa6a">Ver <i class="fa-solid fa-arrow-right"></i></button>
+
+              </div>
+
+            </div>
+
+
+
+            <div class="mod-card js-reveal" style="--reveal-delay:.27s;--card-color:#c0a020">
+
+              <div class="mod-card-bg" style="--bg1:rgba(192,160,32,.14);--bg2:rgba(192,160,32,.05)"></div>
+
+              <div class="mod-img-float">
+
+                <img src="../assets/img/reportes.jpg" alt="Reportes" />
+
+                <div class="mod-img-ring" style="--ring:rgba(192,160,32,.45)"></div>
+
+              </div>
+
+              <div class="mod-provider">
+
+                <span class="mod-dot" style="background:#c0a020"></span>
+
+                Análisis &nbsp;·&nbsp; <i class="fa-solid fa-chart-bar" style="color:#c0a020"></i>
+
+              </div>
+
+              <h3 class="mod-title">Reportes</h3>
+
+              <div class="mod-meta">
+
+                <div class="mod-stat"><span class="mod-stat-val">−34%</span><span class="mod-stat-lbl">costos</span></div>
+
+                <div class="mod-divv"></div>
+
+                <div class="mod-stat"><span class="mod-stat-val">PDF</span><span class="mod-stat-lbl">export</span></div>
+
+              </div>
+
+              <div class="mod-bottom">
+
+                <span class="mod-tag"
+                  style="background:rgba(192,160,32,.1);border-color:rgba(192,160,32,.26);color:#c0a020"><i
+                    class="fa-solid fa-file-chart-column"></i> Exportable</span>
+
+                <button class="mod-btn" style="--btn:#c0a020">Ver <i class="fa-solid fa-arrow-right"></i></button>
+
+              </div>
+
+            </div>
+
+
+
+            <div class="mod-card js-reveal" style="--reveal-delay:.36s;--card-color:#a84040">
+
+              <div class="mod-card-bg" style="--bg1:rgba(168,64,64,.15);--bg2:rgba(168,64,64,.05)"></div>
+
+              <div class="mod-img-float">
+
+                <img src="../assets/img/orden.jpg" alt="Ordenes" />
+
+                <div class="mod-img-ring" style="--ring:rgba(168,64,64,.45)"></div>
+
+              </div>
+
+              <div class="mod-provider">
+
+                <span class="mod-dot" style="background:#a84040"></span>
+
+                Flujo completo &nbsp;·&nbsp; <i class="fa-solid fa-list-check" style="color:#a84040"></i>
+
+              </div>
+
+              <h3 class="mod-title">Órdenes de Trabajo</h3>
+
+              <div class="mod-meta">
+
+                <div class="mod-stat"><span class="mod-stat-val">OT</span><span class="mod-stat-lbl">digital</span></div>
+
+                <div class="mod-divv"></div>
+
+                <div class="mod-stat"><span class="mod-stat-val"><i class="fa-solid fa-camera"></i></span><span
+                    class="mod-stat-lbl">con fotos</span></div>
+
+              </div>
+
+              <div class="mod-bottom">
+
+                <span class="mod-tag"
+                  style="background:rgba(168,64,64,.1);border-color:rgba(168,64,64,.26);color:#a87070"><i
+                    class="fa-solid fa-pen-to-square"></i> Evidencia</span>
+
+                <button class="mod-btn" style="--btn:#a84040">Ver <i class="fa-solid fa-arrow-right"></i></button>
+
+              </div>
+
+            </div>
+
+
 
           </div>
 
-          <div class="mod-provider">
-
-            <span class="mod-dot" style="background:#22c07a"></span>
-
-            FlotaControl 360 &nbsp;·&nbsp; <i class="fa-solid fa-circle-check" style="color:#22c07a"></i>
-
-          </div>
-
-          <h3 class="mod-title">Dashboard</h3>
-
-          <div class="mod-meta">
-
-            <div class="mod-stat"><span class="mod-stat-val">12</span><span class="mod-stat-lbl">vehículos</span></div>
-
-            <div class="mod-divv"></div>
-
-            <div class="mod-stat"><span class="mod-stat-val">3</span><span class="mod-stat-lbl">alertas</span></div>
-
-          </div>
-
-          <div class="mod-bottom">
-
-            <span class="mod-tag"><i class="fa-solid fa-bolt"></i> Tiempo real</span>
-
-            <button class="mod-btn">Ver <i class="fa-solid fa-arrow-right"></i></button>
-
-          </div>
+          <button class="cflow-nav-btn cflow-next" id="cflowNext" aria-label="Siguiente">
+            <i class="fa-solid fa-chevron-right"></i>
+          </button>
 
         </div>
 
-
-
-        <div class="mod-card js-reveal" style="--reveal-delay:.09s;--card-color:#c07040">
-
-          <div class="mod-card-bg" style="--bg1:rgba(192,112,64,.18);--bg2:rgba(192,112,64,.06)"></div>
-
-          <div class="mod-img-float">
-
-            <img src="https://images.unsplash.com/photo-1625047509252-ab38fb5c7343?w=600&q=85" alt="Mantenimiento" />
-
-            <div class="mod-img-ring" style="--ring:rgba(192,112,64,.4)"></div>
-
-          </div>
-
-          <div class="mod-provider">
-
-            <span class="mod-dot" style="background:#c07040"></span>
-
-            Preventivo &nbsp;·&nbsp; <i class="fa-solid fa-clock" style="color:#c07040"></i>
-
-          </div>
-
-          <h3 class="mod-title">Mantenimiento</h3>
-
-          <div class="mod-meta">
-
-            <div class="mod-stat"><span class="mod-stat-val">5</span><span class="mod-stat-lbl">planes</span></div>
-
-            <div class="mod-divv"></div>
-
-            <div class="mod-stat"><span class="mod-stat-val">km+d</span><span class="mod-stat-lbl">criterio</span></div>
-
-          </div>
-
-          <div class="mod-bottom">
-
-            <span class="mod-tag"
-              style="background:rgba(192,112,64,.12);border-color:rgba(192,112,64,.28);color:#c07040"><i
-                class="fa-solid fa-bell"></i> Auto-alertas</span>
-
-            <button class="mod-btn" style="--btn:#c07040">Ver <i class="fa-solid fa-arrow-right"></i></button>
-
-          </div>
-
-        </div>
-
-
-
-        <div class="mod-card js-reveal" style="--reveal-delay:.18s;--card-color:#1aaa6a">
-
-          <div class="mod-card-bg" style="--bg1:rgba(26,170,106,.16);--bg2:rgba(26,170,106,.05)"></div>
-
-          <div class="mod-img-float">
-
-            <img src="https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=600&q=85" alt="Alertas" />
-
-            <div class="mod-img-ring" style="--ring:rgba(26,170,106,.45)"></div>
-
-          </div>
-
-          <div class="mod-provider">
-
-            <span class="mod-dot" style="background:#1aaa6a"></span>
-
-            SOAT &amp; RTM &nbsp;·&nbsp; <i class="fa-solid fa-shield-check" style="color:#1aaa6a"></i>
-
-          </div>
-
-          <h3 class="mod-title">Alertas</h3>
-
-          <div class="mod-meta">
-
-            <div class="mod-stat"><span class="mod-stat-val">24/7</span><span class="mod-stat-lbl">activas</span></div>
-
-            <div class="mod-divv"></div>
-
-            <div class="mod-stat"><span class="mod-stat-val">0</span><span class="mod-stat-lbl">perdidas</span></div>
-
-          </div>
-
-          <div class="mod-bottom">
-
-            <span class="mod-tag"
-              style="background:rgba(26,170,106,.1);border-color:rgba(26,170,106,.26);color:#1aaa6a"><i
-                class="fa-solid fa-envelope"></i> Notificaciones</span>
-
-            <button class="mod-btn" style="--btn:#1aaa6a">Ver <i class="fa-solid fa-arrow-right"></i></button>
-
-          </div>
-
-        </div>
-
-
-
-        <div class="mod-card js-reveal" style="--reveal-delay:.27s;--card-color:#c0a020">
-
-          <div class="mod-card-bg" style="--bg1:rgba(192,160,32,.14);--bg2:rgba(192,160,32,.05)"></div>
-
-          <div class="mod-img-float">
-
-            <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&q=85" alt="Reportes" />
-
-            <div class="mod-img-ring" style="--ring:rgba(192,160,32,.45)"></div>
-
-          </div>
-
-          <div class="mod-provider">
-
-            <span class="mod-dot" style="background:#c0a020"></span>
-
-            Análisis &nbsp;·&nbsp; <i class="fa-solid fa-chart-bar" style="color:#c0a020"></i>
-
-          </div>
-
-          <h3 class="mod-title">Reportes</h3>
-
-          <div class="mod-meta">
-
-            <div class="mod-stat"><span class="mod-stat-val">−34%</span><span class="mod-stat-lbl">costos</span></div>
-
-            <div class="mod-divv"></div>
-
-            <div class="mod-stat"><span class="mod-stat-val">PDF</span><span class="mod-stat-lbl">export</span></div>
-
-          </div>
-
-          <div class="mod-bottom">
-
-            <span class="mod-tag"
-              style="background:rgba(192,160,32,.1);border-color:rgba(192,160,32,.26);color:#c0a020"><i
-                class="fa-solid fa-file-chart-column"></i> Exportable</span>
-
-            <button class="mod-btn" style="--btn:#c0a020">Ver <i class="fa-solid fa-arrow-right"></i></button>
-
-          </div>
-
-        </div>
-
-
-
-        <div class="mod-card js-reveal" style="--reveal-delay:.36s;--card-color:#a84040">
-
-          <div class="mod-card-bg" style="--bg1:rgba(168,64,64,.15);--bg2:rgba(168,64,64,.05)"></div>
-
-          <div class="mod-img-float">
-
-            <img src="https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?w=600&q=85" alt="Ordenes" />
-
-            <div class="mod-img-ring" style="--ring:rgba(168,64,64,.45)"></div>
-
-          </div>
-
-          <div class="mod-provider">
-
-            <span class="mod-dot" style="background:#a84040"></span>
-
-            Flujo completo &nbsp;·&nbsp; <i class="fa-solid fa-list-check" style="color:#a84040"></i>
-
-          </div>
-
-          <h3 class="mod-title">Órdenes de Trabajo</h3>
-
-          <div class="mod-meta">
-
-            <div class="mod-stat"><span class="mod-stat-val">OT</span><span class="mod-stat-lbl">digital</span></div>
-
-            <div class="mod-divv"></div>
-
-            <div class="mod-stat"><span class="mod-stat-val"><i class="fa-solid fa-camera"></i></span><span
-                class="mod-stat-lbl">con fotos</span></div>
-
-          </div>
-
-          <div class="mod-bottom">
-
-            <span class="mod-tag"
-              style="background:rgba(168,64,64,.1);border-color:rgba(168,64,64,.26);color:#a87070"><i
-                class="fa-solid fa-pen-to-square"></i> Evidencia</span>
-
-            <button class="mod-btn" style="--btn:#a84040">Ver <i class="fa-solid fa-arrow-right"></i></button>
-
-          </div>
-
-        </div>
-
-
-
-
+        <div class="cflow-dots" id="cflowDots"></div>
 
       </div>
 
@@ -689,94 +707,6 @@
     </div>
 
   </section>
-
-
-
-  <section class="stats-sec" id="stats">
-    <div class="stats-inner">
-      <div class="section-header" style="margin-bottom:60px">
-        <div class="sec-eyebrow"><span></span> Resultados reales <span></span></div>
-        <h2 class="sec-title">Números que<br><em>hablan solos</em></h2>
-      </div>
-      <div class="stats-grid">
-
-        <div class="stat-card sc-blue js-reveal">
-          <div class="stat-img-bg">
-            <img src="https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=600&q=80" alt="" loading="lazy" />
-            <div class="stat-img-overlay" style="--oc:rgba(26,65,140,0.82)"></div>
-          </div>
-          <div class="stat-content">
-            <div class="sc-icon-new"><i class="fa-solid fa-bus"></i></div>
-            <div class="sc-row">
-              <div class="sc-num counter2" data-target="200">0</div>
-              <div class="sc-suf">+</div>
-            </div>
-            <div class="sc-lbl">Vehículos gestionados</div>
-            <div class="sc-bar">
-              <div class="sc-fill" data-width="80" style="background:#5aabf0"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="stat-card sc-green js-reveal" style="--reveal-delay:.1s">
-          <div class="stat-img-bg">
-            <img src="https://images.unsplash.com/photo-1625047509252-ab38fb5c7343?w=600&q=80" alt="" loading="lazy" />
-            <div class="stat-img-overlay" style="--oc:rgba(10,60,36,0.82)"></div>
-          </div>
-          <div class="stat-content">
-            <div class="sc-icon-new"><i class="fa-solid fa-calendar-check"></i></div>
-            <div class="sc-row">
-              <div class="sc-num counter2" data-target="98">0</div>
-              <div class="sc-suf">%</div>
-            </div>
-            <div class="sc-lbl">Cumplimiento de mantenimientos</div>
-            <div class="sc-bar">
-              <div class="sc-fill" data-width="98" style="background:#22c07a"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="stat-card sc-orange js-reveal" style="--reveal-delay:.2s">
-          <div class="stat-img-bg">
-            <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=600&q=80" alt="" loading="lazy" />
-            <div class="stat-img-overlay" style="--oc:rgba(90,40,10,0.82)"></div>
-          </div>
-          <div class="stat-content">
-            <div class="sc-icon-new"><i class="fa-solid fa-piggy-bank"></i></div>
-            <div class="sc-row">
-              <div class="sc-num counter2" data-target="34">0</div>
-              <div class="sc-suf">%</div>
-            </div>
-            <div class="sc-lbl">Reducción en costos correctivos</div>
-            <div class="sc-bar">
-              <div class="sc-fill" data-width="34" style="background:#e07040"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="stat-card sc-purple js-reveal" style="--reveal-delay:.3s">
-          <div class="stat-img-bg">
-            <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=600&q=80" alt="" loading="lazy" />
-            <div class="stat-img-overlay" style="--oc:rgba(40,20,80,0.82)"></div>
-          </div>
-          <div class="stat-content">
-            <div class="sc-icon-new"><i class="fa-solid fa-clock-rotate-left"></i></div>
-            <div class="sc-row">
-              <div class="sc-num counter2" data-target="5">0</div>
-              <div class="sc-suf">min</div>
-            </div>
-            <div class="sc-lbl">Para generar un reporte completo</div>
-            <div class="sc-bar">
-              <div class="sc-fill" data-width="95" style="background:#9070e0"></div>
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </section>
-
-
 
 
 

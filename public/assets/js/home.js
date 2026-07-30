@@ -159,18 +159,6 @@ function animCounter(el, target, dur = 1700) {
     entries.forEach(e => { if (e.isIntersecting) { animCounter(e.target, +e.target.dataset.target, 1400); cObs.unobserve(e.target); } });
   }, { threshold: 0.5 });
   document.querySelectorAll('.counter').forEach(el => cObs.observe(el));
-
-  /* Stat counters + bar fills */
-  const c2Obs = new IntersectionObserver(entries => {
-    entries.forEach(e => {
-      if (!e.isIntersecting) return;
-      animCounter(e.target, +e.target.dataset.target, 2000);
-      const fill = e.target.closest('.stat-card')?.querySelector('.sc-fill');
-      if (fill) { setTimeout(() => { fill.style.width = fill.dataset.width + '%'; }, 150); }
-      c2Obs.unobserve(e.target);
-    });
-  }, { threshold: 0.3 });
-  document.querySelectorAll('.counter2').forEach(el => c2Obs.observe(el));
 })();
 
 /* ── CARRUSEL ── */
@@ -360,6 +348,7 @@ function animCounter(el, target, dur = 1700) {
   document.querySelectorAll('.mod-card').forEach(card => {
     let raf;
     card.addEventListener('mousemove', e => {
+      if (card.closest('#cflowTrack') && !card.classList.contains('card-active')) return;
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         const r  = card.getBoundingClientRect();
@@ -368,13 +357,21 @@ function animCounter(el, target, dur = 1700) {
         const tX = x * 7;
         const tY = -y * 5;
         card.style.transition = 'box-shadow 0.1s ease, border-color 0.1s ease';
-        card.style.transform  = `translateY(-14px) scale(1.025) perspective(900px) rotateY(${tX}deg) rotateX(${tY}deg)`;
+        if (card.closest('#cflowTrack')) {
+          card.style.transform  = `perspective(1000px) translate3d(0, 0, 30px) scale(1) rotateY(${tX}deg) rotateX(${tY}deg)`;
+        } else {
+          card.style.transform  = `translateY(-14px) scale(1.025) perspective(900px) rotateY(${tX}deg) rotateX(${tY}deg)`;
+        }
       });
     });
     card.addEventListener('mouseleave', () => {
       cancelAnimationFrame(raf);
       card.style.transition = 'transform 0.55s cubic-bezier(0.16,1,0.3,1), box-shadow 0.55s, border-color 0.3s';
-      card.style.transform  = '';
+      if (card.closest('#cflowTrack')) {
+        card.style.transform  = 'perspective(1000px) translate3d(0, 0, 30px) scale(1)';
+      } else {
+        card.style.transform  = '';
+      }
     });
   });
 })();
@@ -491,4 +488,145 @@ function animCounter(el, target, dur = 1700) {
   }
   setTimeout(glitch, 1100);
   setInterval(glitch, 9000);
+})();
+
+/* ── COVER FLOW CAROUSEL ── */
+(function initCoverFlow() {
+  const track = document.getElementById('cflowTrack');
+  const cards = track ? Array.from(track.querySelectorAll('.mod-card')) : [];
+  const prevBtn = document.getElementById('cflowPrev');
+  const nextBtn = document.getElementById('cflowNext');
+  const dotsContainer = document.getElementById('cflowDots');
+
+  if (!track || cards.length === 0) return;
+
+  let activeIndex = 2; // Center card (Alertas) active initially
+  const totalCards = cards.length;
+
+  // Create Dots
+  dotsContainer.innerHTML = '';
+  cards.forEach((_, idx) => {
+    const dot = document.createElement('button');
+    dot.className = `cflow-dot${idx === activeIndex ? ' active' : ''}`;
+    dot.setAttribute('aria-label', `Ir a tarjeta ${idx + 1}`);
+    dot.addEventListener('click', () => {
+      activeIndex = idx;
+      updateCoverFlow();
+    });
+    dotsContainer.appendChild(dot);
+  });
+
+  const dots = Array.from(dotsContainer.querySelectorAll('.cflow-dot'));
+
+  function updateCoverFlow() {
+    cards.forEach((card, idx) => {
+      card.classList.remove('card-active', 'card-prev', 'card-next', 'card-far-prev', 'card-far-next', 'card-hidden');
+      card.style.transform = ''; 
+
+      if (idx === activeIndex) {
+        card.classList.add('card-active');
+      } else if (idx === activeIndex - 1) {
+        card.classList.add('card-prev');
+      } else if (idx === activeIndex + 1) {
+        card.classList.add('card-next');
+      } else if (idx < activeIndex - 1) {
+        if (idx === activeIndex - 2) {
+          card.classList.add('card-far-prev');
+        } else {
+          card.classList.add('card-hidden');
+        }
+      } else if (idx > activeIndex + 1) {
+        if (idx === activeIndex + 2) {
+          card.classList.add('card-far-next');
+        } else {
+          card.classList.add('card-hidden');
+        }
+      }
+    });
+
+    dots.forEach((dot, idx) => {
+      dot.classList.toggle('active', idx === activeIndex);
+    });
+  }
+
+  function goNext() {
+    if (activeIndex < totalCards - 1) {
+      activeIndex++;
+      updateCoverFlow();
+    }
+  }
+
+  function goPrev() {
+    if (activeIndex > 0) {
+      activeIndex--;
+      updateCoverFlow();
+    }
+  }
+
+  if (prevBtn) prevBtn.addEventListener('click', goPrev);
+  if (nextBtn) nextBtn.addEventListener('click', goNext);
+
+  document.addEventListener('keydown', e => {
+    const rect = track.getBoundingClientRect();
+    const inViewport = rect.top < window.innerHeight && rect.bottom > 0;
+    if (inViewport) {
+      if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev(); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); goNext(); }
+    }
+  });
+
+  let startX = 0;
+  let isDragging = false;
+  let dragDiff = 0;
+
+  function dragStart(e) {
+    startX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+    isDragging = true;
+    dragDiff = 0;
+  }
+
+  function dragMove(e) {
+    if (!isDragging) return;
+    const currentX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+    dragDiff = startX - currentX;
+    
+    if (Math.abs(dragDiff) < 150) {
+      track.style.transform = `translateX(${-dragDiff * 0.3}px)`;
+    }
+  }
+
+  function dragEnd() {
+    if (!isDragging) return;
+    isDragging = false;
+    track.style.transform = ''; 
+
+    if (Math.abs(dragDiff) > 50) {
+      if (dragDiff > 0) {
+        goNext();
+      } else {
+        goPrev();
+      }
+    }
+  }
+
+  track.addEventListener('mousedown', dragStart);
+  window.addEventListener('mousemove', dragMove);
+  window.addEventListener('mouseup', dragEnd);
+
+  track.addEventListener('touchstart', dragStart, { passive: true });
+  track.addEventListener('touchmove', dragMove, { passive: true });
+  track.addEventListener('touchend', dragEnd);
+
+  track.addEventListener('selectstart', e => e.preventDefault());
+
+  cards.forEach(card => {
+    card.addEventListener('click', e => {
+      if (Math.abs(dragDiff) > 10) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }, true);
+  });
+
+  updateCoverFlow();
 })();
