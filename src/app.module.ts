@@ -45,21 +45,29 @@ import { NovedadesModule } from './novedades/novedades.module';
     ),
 
     TypeOrmModule.forRootAsync({
-      imports: [ConfigModule],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        host: config.get('DB_HOST', 'localhost'),
-        port: +config.get('DB_PORT', '5432'),
-        username: config.get('DB_USER', 'postgres'),
-        password: config.getOrThrow('DB_PASSWORD'),
-        database: config.get('DB_NAME', 'flotacontrol'),
-        autoLoadEntities: true,
-        synchronize: false,
-        logging: config.get('NODE_ENV') === 'development',
-        extra: { options: '-c TimeZone=America/Bogota' },
-      }),
-      inject: [ConfigService],
-    }),
+  imports: [ConfigModule],
+  useFactory: (config: ConfigService) => ({
+    type: 'postgres',
+    host: config.get('DB_HOST', 'localhost'),
+    port: +config.get('DB_PORT', '5432'),
+    username: config.get('DB_USERNAME', 'postgres'),
+    password: config.getOrThrow('DB_PASSWORD'),
+    database: config.get('DB_NAME', 'flotacontrol'),
+
+    autoLoadEntities: true,
+    synchronize: false,
+    logging: config.get('NODE_ENV') === 'development',
+
+    ssl: {
+      rejectUnauthorized: false,
+    },
+
+    extra: {
+      options: '-c TimeZone=America/Bogota',
+    },
+  }),
+  inject: [ConfigService],
+}),
 
     ScheduleModule.forRoot(),
 
