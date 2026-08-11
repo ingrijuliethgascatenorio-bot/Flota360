@@ -17,15 +17,13 @@ async function bootstrap() {
 
   app.enableCors({
     origin: (origin, callback) => {
-      // Permite: sin origin, localhost, 127.0.0.1, IPs locales (192.168.x.x),
-      // ngrok y cualquier archivo local (null)
       if (
         !origin ||
         origin.startsWith('http://localhost') ||
-        origin.startsWith('http://127.0.0.1.') ||
+        origin.startsWith('http://127.0.0.1') ||
         origin.startsWith('http://192.168.') ||
         origin.startsWith('http://10.') ||
-        origin.includes('ngrok') || // ← ngrok
+        origin.includes('ngrok') ||
         origin === 'null'
       ) {
         callback(null, true);
@@ -33,26 +31,44 @@ async function bootstrap() {
         callback(new Error(`CORS bloqueado para: ${origin}`));
       }
     },
+
     credentials: true,
+
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+
     allowedHeaders: [
       'Content-Type',
       'Authorization',
-      'ngrok-skip-browser-warning', // ← header especial de ngrok
+      'ngrok-skip-browser-warning',
     ],
   });
 
+  // Archivos de uploads
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads',
   });
-  // ← AGREGA ESTO: sirve el frontend
+
+  // Frontend
   app.useStaticAssets(join(process.cwd(), 'public'), {
     prefix: '/',
+    index: false,
   });
+
+  // Home
+  app.get('/', (_req, res) => {
+    res.redirect('/pages/home.html');
+  });
+
+  // API
   app.setGlobalPrefix('api');
 
   const port = process.env.PORT || 3002;
+
   await app.listen(port);
-  console.log(`FlotaControl backend corriendo en http://localhost:${port}/api`);
+
+  console.log(
+    `FlotaControl backend corriendo en http://localhost:${port}/api`,
+  );
 }
+
 bootstrap();
