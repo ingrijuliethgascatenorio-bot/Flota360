@@ -15,7 +15,7 @@ async function bootstrap() {
         origin: (origin, callback) => {
             if (!origin ||
                 origin.startsWith('http://localhost') ||
-                origin.startsWith('http://127.0.0.1.') ||
+                origin.startsWith('http://127.0.0.1') ||
                 origin.startsWith('http://192.168.') ||
                 origin.startsWith('http://10.') ||
                 origin.includes('ngrok') ||
@@ -39,11 +39,16 @@ async function bootstrap() {
     });
     app.useStaticAssets((0, path_1.join)(process.cwd(), 'public'), {
         prefix: '/',
+        index: false,
+    });
+    const expressApp = app.getHttpAdapter().getInstance();
+    expressApp.get('/', (_req, res) => {
+        res.redirect('/pages/home.html');
     });
     app.setGlobalPrefix('api');
     const port = process.env.PORT || 3002;
-    await app.listen(port);
-    console.log(`FlotaControl backend corriendo en http://localhost:${port}/api`);
+    await app.listen(port, '0.0.0.0');
+    console.log(`FlotaControl backend corriendo en puerto ${port}`);
 }
 bootstrap();
 //# sourceMappingURL=main.js.map

@@ -10,9 +10,7 @@ exports.AppModule = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const config_1 = require("@nestjs/config");
-const serve_static_1 = require("@nestjs/serve-static");
 const schedule_1 = require("@nestjs/schedule");
-const path_1 = require("path");
 const auth_module_1 = require("./auth/auth.module");
 const usuarios_module_1 = require("./usuarios/usuarios.module");
 const vehiculos_module_1 = require("./vehiculos/vehiculos.module");
@@ -34,14 +32,9 @@ exports.AppModule = AppModule;
 exports.AppModule = AppModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            config_1.ConfigModule.forRoot({ isGlobal: true, envFilePath: '.env' }),
-            serve_static_1.ServeStaticModule.forRoot({
-                rootPath: (0, path_1.join)(__dirname, '..', 'public'),
-                exclude: ['/api/{*path}'],
-            }, {
-                rootPath: (0, path_1.join)(process.cwd(), 'uploads'),
-                serveRoot: '/uploads',
-                exclude: ['/api/{*path}'],
+            config_1.ConfigModule.forRoot({
+                isGlobal: true,
+                envFilePath: '.env',
             }),
             typeorm_1.TypeOrmModule.forRootAsync({
                 imports: [config_1.ConfigModule],
@@ -49,13 +42,18 @@ exports.AppModule = AppModule = __decorate([
                     type: 'postgres',
                     host: config.get('DB_HOST', 'localhost'),
                     port: +config.get('DB_PORT', '5432'),
-                    username: config.get('DB_USER', 'postgres'),
+                    username: config.get('DB_USERNAME', 'postgres'),
                     password: config.getOrThrow('DB_PASSWORD'),
                     database: config.get('DB_NAME', 'flotacontrol'),
                     autoLoadEntities: true,
                     synchronize: false,
                     logging: config.get('NODE_ENV') === 'development',
-                    extra: { options: '-c TimeZone=America/Bogota' },
+                    ssl: {
+                        rejectUnauthorized: false,
+                    },
+                    extra: {
+                        options: '-c TimeZone=America/Bogota',
+                    },
                 }),
                 inject: [config_1.ConfigService],
             }),
