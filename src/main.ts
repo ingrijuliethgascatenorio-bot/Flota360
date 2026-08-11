@@ -3,9 +3,13 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { join } from 'path';
+import { existsSync } from 'fs';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app =
+    await NestFactory.create<NestExpressApplication>(
+      AppModule,
+    );
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -16,23 +20,16 @@ async function bootstrap() {
   );
 
   app.enableCors({
-    origin: (origin, callback) => {
-      if (
-        !origin ||
-        origin.startsWith('http://localhost') ||
-        origin.startsWith('http://127.0.0.1') ||
-        origin.startsWith('http://192.168.') ||
-        origin.startsWith('http://10.') ||
-        origin.includes('ngrok') ||
-        origin === 'null'
-      ) {
-        callback(null, true);
-      } else {
-        callback(new Error(`CORS bloqueado para: ${origin}`));
-      }
-    },
+    origin: true,
     credentials: true,
-    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: [
+      'GET',
+      'POST',
+      'PATCH',
+      'PUT',
+      'DELETE',
+      'OPTIONS',
+    ],
     allowedHeaders: [
       'Content-Type',
       'Authorization',
@@ -40,29 +37,82 @@ async function bootstrap() {
     ],
   });
 
-  // Archivos subidos
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
-    prefix: '/uploads',
-  });
+  // ─────────────────────────────────────────────
+  // UPLOADS
+  // ─────────────────────────────────────────────
 
-  // Frontend
-  app.useStaticAssets(join(process.cwd(), 'public'), {
+  app.useStaticAssets(
+    join(process.cwd(), 'uploads'),
+    {
+      prefix: '/uploads',
+    },
+  );
+
+  // ─────────────────────────────────────────────
+  // FRONTEND
+  // ─────────────────────────────────────────────
+
+  const publicPath = join(
+    process.cwd(),
+    'public',
+  );
+
+  console.log(
+    '📁 Public path:',
+    publicPath,
+  );
+
+  console.log(
+    '📄 Home existe:',
+    existsSync(
+      join(
+        publicPath,
+        'pages',
+        'home.html',
+      ),
+    ),
+  );
+
+  app.useStaticAssets(publicPath, {
     prefix: '/',
     index: false,
   });
 
-  // Página principal
-  app.get('/', (req, res) => {
-    res.redirect('/pages/home.html');
-  });
+  // ─────────────────────────────────────────────
+  // API
+  // ─────────────────────────────────────────────
 
   app.setGlobalPrefix('api');
 
-  const port = process.env.PORT || 3002;
+  // ─────────────────────────────────────────────
+  // HOME
+  // ─────────────────────────────────────────────
 
-  await app.listen(port, '0.0.0.0');
+  app.get('/', (_req, res) => {
+    res.sendFile(
+      join(
+        publicPath,
+        'pages',
+        'home.html',
+      ),
+    );
+  });
 
-  console.log(`FlotaControl backend corriendo en puerto ${port}`);
+  // ─────────────────────────────────────────────
+  // PUERTO
+  // ─────────────────────────────────────────────
+
+  const port =
+    Number(process.env.PORT) || 3002;
+
+  await app.listen(
+    port,
+    '0.0.0.0',
+  );
+
+  console.log(
+    `🚛 FlotaControl corriendo en puerto ${port}`,
+  );
 }
 
 bootstrap();

@@ -5,21 +5,21 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 
-// ── Sprint 1 & 2 ──────────────────────────────────────────────
+// ── Sprint 1 & 2 ──────────────────────────────────────────────────────────────
 import { AuthModule } from './auth/auth.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { VehiculosModule } from './vehiculos/vehiculos.module';
 import { DocumentosModule } from './documentos/documentos.module';
 import { OrdenesModule } from './ordenes/ordenes.module';
 
-// ── Sprint 3 ─────────────────────────────────────────────────
+// ── Sprint 3 ──────────────────────────────────────────────────────────────────
 import { FotosModule } from './fotos/fotos.module';
 import { AlertasModule } from './alertas/alertas.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { KilometrajeModule } from './kilometraje/kilometraje.module';
 import { AsignacionesModule } from './asignaciones/asignaciones.module';
 
-// ── Sprint 4 ─────────────────────────────────────────────────
+// ── Sprint 4 ──────────────────────────────────────────────────────────────────
 import { ReportesModule } from './reportes/reportes.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { PrediccionModule } from './prediccion/prediccion.module';
@@ -28,36 +28,52 @@ import { NovedadesModule } from './novedades/novedades.module';
 
 @Module({
   imports: [
-    // ── Variables de entorno ─────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────
+    // CONFIGURACIÓN
+    // ─────────────────────────────────────────────────────────────────────
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
     }),
 
-    // ── Base de datos PostgreSQL / Supabase ──────────────────
+    // ─────────────────────────────────────────────────────────────────────
+    // BASE DE DATOS
+    // ─────────────────────────────────────────────────────────────────────
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
 
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
 
-        host: config.get('DB_HOST', 'localhost'),
+        host: config.get<string>('DB_HOST', 'localhost'),
 
-        port: +config.get('DB_PORT', '5432'),
+        port: Number(
+          config.get<string>('DB_PORT', '5432'),
+        ),
 
-        username: config.get('DB_USERNAME', 'postgres'),
+        username: config.get<string>(
+          'DB_USERNAME',
+          'postgres',
+        ),
 
-        password: config.getOrThrow('DB_PASSWORD'),
+        password: config.getOrThrow<string>(
+          'DB_PASSWORD',
+        ),
 
-        database: config.get('DB_NAME', 'flotacontrol'),
+        database: config.get<string>(
+          'DB_NAME',
+          'flotacontrol',
+        ),
 
         autoLoadEntities: true,
 
         synchronize: false,
 
-        logging: config.get('NODE_ENV') === 'development',
+        logging:
+          config.get<string>('NODE_ENV') ===
+          'development',
 
-        // SSL necesario para la conexión con Supabase
+        // Supabase
         ssl: {
           rejectUnauthorized: false,
         },
@@ -70,30 +86,36 @@ import { NovedadesModule } from './novedades/novedades.module';
       inject: [ConfigService],
     }),
 
-    // ── Tareas programadas ───────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────
+    // TAREAS PROGRAMADAS
+    // ─────────────────────────────────────────────────────────────────────
     ScheduleModule.forRoot(),
 
-    // ── Módulos de negocio ───────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────
+    // MÓDULOS DE NEGOCIO
+    // ─────────────────────────────────────────────────────────────────────
+
+    // Sprint 1 & 2
     AuthModule,
     UsuariosModule,
     VehiculosModule,
     DocumentosModule,
     OrdenesModule,
 
-    // ── Sprint 3 ─────────────────────────────────────────────
+    // Sprint 3
     FotosModule,
     AlertasModule,
     SchedulerModule,
     KilometrajeModule,
     AsignacionesModule,
 
-    // ── Sprint 4 ─────────────────────────────────────────────
+    // Sprint 4
     ReportesModule,
     PrediccionModule,
     SaludFinancieraModule,
     NovedadesModule,
 
-    // Dashboard al final porque depende de otros módulos
+    // Dashboard al final
     DashboardModule,
   ],
 })
