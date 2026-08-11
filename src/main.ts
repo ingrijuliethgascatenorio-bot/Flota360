@@ -31,11 +31,8 @@ async function bootstrap() {
         callback(new Error(`CORS bloqueado para: ${origin}`));
       }
     },
-
     credentials: true,
-
     methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-
     allowedHeaders: [
       'Content-Type',
       'Authorization',
@@ -43,7 +40,7 @@ async function bootstrap() {
     ],
   });
 
-  // Archivos de uploads
+  // Archivos subidos
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads',
   });
@@ -54,20 +51,19 @@ async function bootstrap() {
     index: false,
   });
 
-  // Home
-  app.get('/', (_req, res) => {
+  // Página principal
+  app.get('/', (req, res) => {
     res.redirect('/pages/home.html');
   });
 
-  // API
   app.setGlobalPrefix('api');
 
   const port = process.env.PORT || 3002;
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   console.log(
-    `FlotaControl backend corriendo en http://localhost:${port}/api`,
+    `FlotaControl backend corriendo en puerto ${port}`,
   );
 }
 
