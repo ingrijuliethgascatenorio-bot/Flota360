@@ -12,6 +12,8 @@ import {
 import { CreateAsignacionDto } from './dto/create.asignacion.dto';
 import { UpdateAsignacionDto } from './dto/update.asignacion.dto';
 import { DocumentoLegal } from '../documentos/documento-legal.entity';
+import { Vehiculo } from '../vehiculos/vehiculo.entity';
+import { PlanMantenimiento } from '../planes/plan-mantenimiento.entity';
 
 @Injectable()
 export class AsignacionesService {
@@ -20,12 +22,42 @@ export class AsignacionesService {
     private readonly repo: Repository<AsignacionConductor>,
     @InjectRepository(DocumentoLegal)
     private readonly docRepo: Repository<DocumentoLegal>,
+    @InjectRepository(Vehiculo)
+    private readonly vehiculoRepo: Repository<Vehiculo>,
+    @InjectRepository(PlanMantenimiento)
+    private readonly planRepo: Repository<PlanMantenimiento>,
   ) {}
+
+  private async validarVehiculoParaAsignar(vehiculoId: number): Promise<void> {
+    const vehiculo = await this.vehiculoRepo.findOne({ where: { id: vehiculoId } });
+    if (!vehiculo) {
+      throw new NotFoundException(`El vehículo #${vehiculoId} no existe`);
+    }
+
+    if (vehiculo.estadoSemaforo === 'rojo') {
+      throw new BadRequestException(
+        `El vehículo ${vehiculo.placa} no puede ser asignado: el semáforo está en ROJO.`,
+      );
+    }
+
+    const planEnRojo = await this.planRepo.findOne({
+      where: { vehiculo: { id: vehiculoId }, activo: true, colorUrgencia: 'rojo' },
+    });
+
+    if (planEnRojo) {
+      throw new BadRequestException(
+        `El vehículo ${vehiculo.placa} no puede ser asignado: tiene el plan de mantenimiento "${planEnRojo.nombre}" en ROJO.`,
+      );
+    }
+  }
 
   // ── Crear asignación con validaciones ─────────────────────────────────────
   async crear(dto: CreateAsignacionDto): Promise<AsignacionConductor> {
     const fIni = dto.fechaInicio;
     const fFin = dto.fechaFin || dto.fechaInicio;
+
+    // Validar semáforo y planes activos en rojo
+    await this.validarVehiculoParaAsignar(dto.vehiculoId);
 
     // Traer todas las asignaciones activas que se solapen con este rango de fechas
     // (Ya sea del mismo vehículo o del mismo conductor)
@@ -114,6 +146,7 @@ export class AsignacionesService {
 
   // ── Listar asignaciones de un vehículo ────────────────────────────────────
   async porVehiculo(vehiculoId: number): Promise<AsignacionConductor[]> {
+    await this.buscarPorId(vehiculoId).catch(() => {});
     return this.repo.find({
       where: { vehiculo: { id: vehiculoId }, activo: true },
       relations: ['conductor'],
@@ -176,6 +209,11 @@ export class AsignacionesService {
     const activo = dto.activo !== undefined ? dto.activo : asig.activo;
 
     if (activo) {
+      // Validar semáforo y planes activos en rojo si el vehículo cambió o se reactivó la asignación
+      if (vehiculoId) {
+        await this.validarVehiculoParaAsignar(vehiculoId);
+      }
+
       // Validar solapamiento con otras asignaciones (excluyendo la actual)
       const fIni = fechaInicio;
       const fFin = fechaFin || fechaInicio;

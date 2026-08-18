@@ -79,12 +79,19 @@ let AlertasService = AlertasService_1 = class AlertasService {
         return this.getUmbrales();
     }
     async evaluarAlertasMantenimiento(vehiculoId) {
+        const vehiculo = await this.vehiculoRepo.findOne({ where: { id: vehiculoId } });
+        if (!vehiculo) {
+            throw new common_1.NotFoundException(`El vehículo #${vehiculoId} no existe`);
+        }
         const { km: umbralKm, dias: umbralDias } = await this.getUmbrales();
         const hoy = new Date();
         const planes = await this.planRepo.find({
             where: { vehiculo: { id: vehiculoId }, activo: true },
             relations: ['vehiculo'],
         });
+        if (planes.length === 0) {
+            throw new common_1.BadRequestException(`El vehículo #${vehiculoId} no tiene ningún plan de mantenimiento activo para evaluar.`);
+        }
         const generadas = [];
         for (const plan of planes) {
             const tipoAlerta = this.calcularTipoAlertaMantenimiento(plan, plan.vehiculo.kmActual, hoy, umbralKm, umbralDias);
@@ -109,6 +116,10 @@ let AlertasService = AlertasService_1 = class AlertasService {
         return generadas;
     }
     async evaluarAlertasDocumentos(vehiculoId) {
+        const vehiculo = await this.vehiculoRepo.findOne({ where: { id: vehiculoId } });
+        if (!vehiculo) {
+            throw new common_1.NotFoundException(`El vehículo #${vehiculoId} no existe`);
+        }
         const hoy = new Date();
         const documentos = await this.documentoRepo.findBy({ vehiculo: { id: vehiculoId } });
         const generadas = [];

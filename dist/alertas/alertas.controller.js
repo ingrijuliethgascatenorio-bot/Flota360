@@ -94,7 +94,7 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], AlertasController.prototype, "marcarLeida", null);
 __decorate([
-    (0, roles_decorator_1.Roles)(usuario_entity_1.RolUsuario.ADMINISTRADOR),
+    (0, roles_decorator_1.Roles)(usuario_entity_1.RolUsuario.ADMINISTRADOR, usuario_entity_1.RolUsuario.TECNICO),
     (0, common_1.Post)('vehiculos/:vehiculoId/alertas/evaluar'),
     __param(0, (0, common_1.Param)('vehiculoId', common_1.ParseIntPipe)),
     __metadata("design:type", Function),

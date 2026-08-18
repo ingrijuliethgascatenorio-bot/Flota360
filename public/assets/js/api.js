@@ -61,7 +61,8 @@ async function apiForm(method, path, formData) {
 function apiAssetUrl(url) {
   if (!url) return '';
   if (/^https?:\/\//i.test(url)) return url;
-  return `${API_BASE.replace(/\/api$/, '')}/${String(url).replace(/^\/+/, '')}`;
+  const normalized = String(url).replace(/\\/g, '/');
+  return `${API_BASE.replace(/\/api$/, '')}/${normalized.replace(/^\/+/, '')}`;
 }
 
 function clearSession() {

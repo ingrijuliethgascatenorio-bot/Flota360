@@ -70,9 +70,9 @@ export class AlertasController {
     return { data };
   }
 
-  // ─── Evaluación manual — solo Administrador ──────────────────────────────
+  // ─── Evaluación manual ───────────────────────────────────────────────────
 
-  @Roles(RolUsuario.ADMINISTRADOR)
+  @Roles(RolUsuario.ADMINISTRADOR, RolUsuario.TECNICO)
   @Post('vehiculos/:vehiculoId/alertas/evaluar')
   async evaluarVehiculo(@Param('vehiculoId', ParseIntPipe) vehiculoId: number) {
     const [mant, doc] = await Promise.all([

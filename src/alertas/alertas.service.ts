@@ -99,6 +99,11 @@ export class AlertasService implements OnModuleInit {
   // ══════════════════════════════════════════════════════════════════════════
 
   async evaluarAlertasMantenimiento(vehiculoId: number): Promise<Alerta[]> {
+    const vehiculo = await this.vehiculoRepo.findOne({ where: { id: vehiculoId } });
+    if (!vehiculo) {
+      throw new NotFoundException(`El vehículo #${vehiculoId} no existe`);
+    }
+
     const { km: umbralKm, dias: umbralDias } = await this.getUmbrales();
     const hoy = new Date();
 
@@ -106,6 +111,12 @@ export class AlertasService implements OnModuleInit {
       where: { vehiculo: { id: vehiculoId }, activo: true },
       relations: ['vehiculo'],
     });
+
+    if (planes.length === 0) {
+      throw new BadRequestException(
+        `El vehículo #${vehiculoId} no tiene ningún plan de mantenimiento activo para evaluar.`,
+      );
+    }
 
     const generadas: Alerta[] = [];
 
@@ -147,6 +158,10 @@ export class AlertasService implements OnModuleInit {
   // ══════════════════════════════════════════════════════════════════════════
 
   async evaluarAlertasDocumentos(vehiculoId: number): Promise<Alerta[]> {
+    const vehiculo = await this.vehiculoRepo.findOne({ where: { id: vehiculoId } });
+    if (!vehiculo) {
+      throw new NotFoundException(`El vehículo #${vehiculoId} no existe`);
+    }
     const hoy = new Date();
     const documentos = await this.documentoRepo.findBy({ vehiculo: { id: vehiculoId } });
     const generadas: Alerta[] = [];

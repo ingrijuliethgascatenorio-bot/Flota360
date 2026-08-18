@@ -343,7 +343,7 @@ function exportarExcel(tipo) {
       ID: u.id, Nombre: u.nombre, Correo: u.correo, Rol: u.rol,
       Activo: u.activo ? 'Sí' : 'No'
     }));
-  } else if (tipo === 'buses') {
+  } else if (tipo === 'buses' || tipo === 'vehiculos') {
     datos     = (typeof vehCache !== 'undefined' ? vehCache : []);
     nombre    = 'reporte_buses';
     nombreHoja = 'Buses';
@@ -352,6 +352,20 @@ function exportarExcel(tipo) {
       ID: v.id, Placa: v.placa, Marca: v.marca, Modelo: v.modelo,
       'Año': v.anio, 'Km Actual': v.kmActual,
       'Semáforo': v.estadoSemaforo || '—'
+    }));
+  } else if (tipo === 'ordenes') {
+    datos     = (typeof ordCache !== 'undefined' ? ordCache : []);
+    nombre    = 'reporte_ordenes';
+    nombreHoja = 'Ordenes';
+    columnas  = ['ID','Placa','Técnico','Plan','Apertura','Estado','Costo Total'];
+    datos     = datos.map(o => ({
+      ID: o.id,
+      Placa: o.vehiculo?.placa || '—',
+      'Técnico': o.tecnico?.nombre || '—',
+      Plan: o.plan?.nombre || (o.planId ? 'Preventivo' : 'Correctivo'),
+      Apertura: (o.fechaApertura || '').split('T')[0] || '—',
+      Estado: o.estado || '—',
+      'Costo Total': o.costoTotal || 0
     }));
   } else if (tipo === 'reportes') {
     datos     = (typeof reporteCache !== 'undefined' ? reporteCache : []);
@@ -418,10 +432,22 @@ function exportarPDF(tipo) {
     titulo = 'Reporte de Usuarios';
     head   = [['ID','Nombre','Correo','Rol','Activo']];
     rows   = (usrCache || []).map(u => [u.id, u.nombre, u.correo, u.rol, u.activo ? 'Sí' : 'No']);
-  } else if (tipo === 'buses') {
+  } else if (tipo === 'buses' || tipo === 'vehiculos') {
     titulo = 'Reporte de Buses / Vehículos';
     head   = [['Placa','Marca','Modelo','Año','Km Actual','Estado']];
     rows   = (vehCache || []).map(v => [v.placa, v.marca, v.modelo, v.anio, _fmt(v.kmActual), v.estadoSemaforo]);
+  } else if (tipo === 'ordenes') {
+    titulo = 'Reporte de Órdenes de Trabajo';
+    head   = [['ID','Placa','Técnico','Plan','Apertura','Estado','Costo']];
+    rows   = (ordCache || []).map(o => [
+      o.id,
+      o.vehiculo?.placa || '—',
+      o.tecnico?.nombre || '—',
+      o.plan?.nombre || (o.planId ? 'Preventivo' : 'Correctivo'),
+      (o.fechaApertura || '').split('T')[0],
+      o.estado || '—',
+      '$' + _fmt(o.costoTotal || 0)
+    ]);
   } else if (tipo === 'reportes') {
     titulo = 'Reporte de Ordenes de Trabajo';
     head   = [['#OT','Vehiculo','Tecnico','Apertura','M. Obra','Repuestos','Total']];
@@ -496,7 +522,7 @@ function _fmt(n) {
 document.addEventListener('DOMContentLoaded', () => {
 
   // ── Botones en sección Vehículos ──────────────────────────────────────────
-  const toolbarVeh = document.querySelector('#page-vehiculos .filter-bar');
+  const toolbarVeh = document.querySelector('#page-vehiculos .filters-bar');
   if (toolbarVeh) {
     const btnExcelBus = _crearBoton('⬇ Excel', 'btn-ghost', () => exportarExcel('buses'));
     const btnPdfBus   = _crearBoton('⬇ PDF', 'btn-ghost', () => exportarPDF('buses'));
@@ -505,7 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ── Botones en sección Usuarios ───────────────────────────────────────────
-  const toolbarUsr = document.querySelector('#page-usuarios .filter-bar');
+  const toolbarUsr = document.querySelector('#page-usuarios .filters-bar');
   if (toolbarUsr) {
     const btnExcelUsr = _crearBoton('⬇ Excel', 'btn-ghost', () => exportarExcel('usuarios'));
     const btnPdfUsr   = _crearBoton('⬇ PDF', 'btn-ghost', () => exportarPDF('usuarios'));
@@ -514,7 +540,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ── Botones en sección Reportes ───────────────────────────────────────────
-  const toolbarRep = document.querySelector('#page-reportes .filter-bar');
+  const toolbarRep = document.querySelector('#page-reportes .filters-bar');
   if (toolbarRep) {
     const btnExcelRep = _crearBoton('⬇ Excel', 'btn-ghost', () => exportarExcel('reportes'));
     const btnPdfRep   = _crearBoton('⬇ PDF', 'btn-ghost', () => exportarPDF('reportes'));
@@ -523,7 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ── Botones en sección Ranking ─────────────────────────────────────────────
-  const toolbarRank = document.querySelector('#page-ranking .filter-bar');
+  const toolbarRank = document.querySelector('#page-ranking .filters-bar');
   if (toolbarRank) {
     const btnExcelRank = _crearBoton('⬇ Excel', 'btn-ghost', () => exportarExcel('ranking'));
     const btnPdfRank   = _crearBoton('⬇ PDF', 'btn-ghost', () => exportarPDF('ranking'));

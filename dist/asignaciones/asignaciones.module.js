@@ -13,12 +13,21 @@ const asignacion_conductor_entity_1 = require("./asignacion_conductor.entity");
 const asignaciones_service_1 = require("./asignaciones.service");
 const asignaciones_controller_1 = require("./asignaciones.controller");
 const documento_legal_entity_1 = require("../documentos/documento-legal.entity");
+const vehiculo_entity_1 = require("../vehiculos/vehiculo.entity");
+const plan_mantenimiento_entity_1 = require("../planes/plan-mantenimiento.entity");
 let AsignacionesModule = class AsignacionesModule {
 };
 exports.AsignacionesModule = AsignacionesModule;
 exports.AsignacionesModule = AsignacionesModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([asignacion_conductor_entity_1.AsignacionConductor, documento_legal_entity_1.DocumentoLegal])],
+        imports: [
+            typeorm_1.TypeOrmModule.forFeature([
+                asignacion_conductor_entity_1.AsignacionConductor,
+                documento_legal_entity_1.DocumentoLegal,
+                vehiculo_entity_1.Vehiculo,
+                plan_mantenimiento_entity_1.PlanMantenimiento,
+            ]),
+        ],
         providers: [asignaciones_service_1.AsignacionesService],
         controllers: [asignaciones_controller_1.AsignacionesController],
         exports: [asignaciones_service_1.AsignacionesService],

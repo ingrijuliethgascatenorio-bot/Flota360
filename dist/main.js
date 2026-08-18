@@ -19,7 +19,8 @@ async function bootstrap() {
                 origin.startsWith('http://192.168.') ||
                 origin.startsWith('http://10.') ||
                 origin.includes('ngrok') ||
-                origin === 'null') {
+                origin === 'null' ||
+                origin.endsWith('julieth.site')) {
                 callback(null, true);
             }
             else {

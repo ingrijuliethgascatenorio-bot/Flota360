@@ -18,16 +18,38 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const asignacion_conductor_entity_1 = require("./asignacion_conductor.entity");
 const documento_legal_entity_1 = require("../documentos/documento-legal.entity");
+const vehiculo_entity_1 = require("../vehiculos/vehiculo.entity");
+const plan_mantenimiento_entity_1 = require("../planes/plan-mantenimiento.entity");
 let AsignacionesService = class AsignacionesService {
     repo;
     docRepo;
-    constructor(repo, docRepo) {
+    vehiculoRepo;
+    planRepo;
+    constructor(repo, docRepo, vehiculoRepo, planRepo) {
         this.repo = repo;
         this.docRepo = docRepo;
+        this.vehiculoRepo = vehiculoRepo;
+        this.planRepo = planRepo;
+    }
+    async validarVehiculoParaAsignar(vehiculoId) {
+        const vehiculo = await this.vehiculoRepo.findOne({ where: { id: vehiculoId } });
+        if (!vehiculo) {
+            throw new common_1.NotFoundException(`El vehículo #${vehiculoId} no existe`);
+        }
+        if (vehiculo.estadoSemaforo === 'rojo') {
+            throw new common_1.BadRequestException(`El vehículo ${vehiculo.placa} no puede ser asignado: el semáforo está en ROJO.`);
+        }
+        const planEnRojo = await this.planRepo.findOne({
+            where: { vehiculo: { id: vehiculoId }, activo: true, colorUrgencia: 'rojo' },
+        });
+        if (planEnRojo) {
+            throw new common_1.BadRequestException(`El vehículo ${vehiculo.placa} no puede ser asignado: tiene el plan de mantenimiento "${planEnRojo.nombre}" en ROJO.`);
+        }
     }
     async crear(dto) {
         const fIni = dto.fechaInicio;
         const fFin = dto.fechaFin || dto.fechaInicio;
+        await this.validarVehiculoParaAsignar(dto.vehiculoId);
         const solapadas = await this.repo
             .createQueryBuilder('a')
             .leftJoinAndSelect('a.conductor', 'c')
@@ -82,6 +104,7 @@ let AsignacionesService = class AsignacionesService {
         });
     }
     async porVehiculo(vehiculoId) {
+        await this.buscarPorId(vehiculoId).catch(() => { });
         return this.repo.find({
             where: { vehiculo: { id: vehiculoId }, activo: true },
             relations: ['conductor'],
@@ -133,6 +156,9 @@ let AsignacionesService = class AsignacionesService {
         const fechaFin = dto.fechaFin !== undefined ? dto.fechaFin : asig.fechaFin;
         const activo = dto.activo !== undefined ? dto.activo : asig.activo;
         if (activo) {
+            if (vehiculoId) {
+                await this.validarVehiculoParaAsignar(vehiculoId);
+            }
             const fIni = fechaInicio;
             const fFin = fechaFin || fechaInicio;
             const solapadas = await this.repo
@@ -195,7 +221,11 @@ exports.AsignacionesService = AsignacionesService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(asignacion_conductor_entity_1.AsignacionConductor)),
     __param(1, (0, typeorm_1.InjectRepository)(documento_legal_entity_1.DocumentoLegal)),
+    __param(2, (0, typeorm_1.InjectRepository)(vehiculo_entity_1.Vehiculo)),
+    __param(3, (0, typeorm_1.InjectRepository)(plan_mantenimiento_entity_1.PlanMantenimiento)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository])
 ], AsignacionesService);
 //# sourceMappingURL=asignaciones.service.js.map

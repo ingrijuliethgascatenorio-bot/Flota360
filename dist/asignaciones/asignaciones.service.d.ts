@@ -3,10 +3,15 @@ import { AsignacionConductor } from './asignacion_conductor.entity';
 import { CreateAsignacionDto } from './dto/create.asignacion.dto';
 import { UpdateAsignacionDto } from './dto/update.asignacion.dto';
 import { DocumentoLegal } from '../documentos/documento-legal.entity';
+import { Vehiculo } from '../vehiculos/vehiculo.entity';
+import { PlanMantenimiento } from '../planes/plan-mantenimiento.entity';
 export declare class AsignacionesService {
     private readonly repo;
     private readonly docRepo;
-    constructor(repo: Repository<AsignacionConductor>, docRepo: Repository<DocumentoLegal>);
+    private readonly vehiculoRepo;
+    private readonly planRepo;
+    constructor(repo: Repository<AsignacionConductor>, docRepo: Repository<DocumentoLegal>, vehiculoRepo: Repository<Vehiculo>, planRepo: Repository<PlanMantenimiento>);
+    private validarVehiculoParaAsignar;
     crear(dto: CreateAsignacionDto): Promise<AsignacionConductor>;
     listarActivas(): Promise<AsignacionConductor[]>;
     porVehiculo(vehiculoId: number): Promise<AsignacionConductor[]>;
