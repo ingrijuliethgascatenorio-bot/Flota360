@@ -13,12 +13,17 @@ const plan_mantenimiento_entity_1 = require("./plan-mantenimiento.entity");
 const planes_service_1 = require("./planes.service");
 const planes_controller_1 = require("./planes.controller");
 const vehiculos_module_1 = require("../vehiculos/vehiculos.module");
+const alerta_entity_1 = require("../alertas/alerta.entity");
+const vehiculo_entity_1 = require("../vehiculos/vehiculo.entity");
 let PlanesModule = class PlanesModule {
 };
 exports.PlanesModule = PlanesModule;
 exports.PlanesModule = PlanesModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([plan_mantenimiento_entity_1.PlanMantenimiento]), vehiculos_module_1.VehiculosModule],
+        imports: [
+            typeorm_1.TypeOrmModule.forFeature([plan_mantenimiento_entity_1.PlanMantenimiento, alerta_entity_1.Alerta, vehiculo_entity_1.Vehiculo]),
+            vehiculos_module_1.VehiculosModule,
+        ],
         providers: [planes_service_1.PlanesService],
         controllers: [planes_controller_1.PlanesController],
         exports: [planes_service_1.PlanesService],

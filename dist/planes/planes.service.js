@@ -18,12 +18,18 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const plan_mantenimiento_entity_1 = require("./plan-mantenimiento.entity");
 const vehiculos_service_1 = require("../vehiculos/vehiculos.service");
+const alerta_entity_1 = require("../alertas/alerta.entity");
+const vehiculo_entity_1 = require("../vehiculos/vehiculo.entity");
 let PlanesService = class PlanesService {
     repo;
     vehiculosService;
-    constructor(repo, vehiculosService) {
+    alertaRepo;
+    vehiculoRepo;
+    constructor(repo, vehiculosService, alertaRepo, vehiculoRepo) {
         this.repo = repo;
         this.vehiculosService = vehiculosService;
+        this.alertaRepo = alertaRepo;
+        this.vehiculoRepo = vehiculoRepo;
     }
     async crear(vehiculoId, dto) {
         const vehiculo = await this.vehiculosService.buscarPorId(vehiculoId);
@@ -116,13 +122,43 @@ let PlanesService = class PlanesService {
             plan.fechaProxima = fecha.toISOString().split('T')[0];
         }
         await this.repo.save(plan);
+        await this.alertaRepo.update({ plan: { id: planId }, leida: false }, { leida: true });
+        if (plan.vehiculo?.id) {
+            await this.recalcularSemaforo(plan.vehiculo.id);
+        }
+    }
+    async recalcularSemaforo(vehiculoId) {
+        const alertasActivas = await this.alertaRepo.find({
+            where: { vehiculo: { id: vehiculoId }, leida: false },
+            select: ['tipoAlerta'],
+        });
+        const tipos = new Set(alertasActivas.map((a) => a.tipoAlerta));
+        let semaforo;
+        if (tipos.has('mantenimiento_vencido') ||
+            tipos.has('documento_vencido') ||
+            tipos.has('documento_7dias')) {
+            semaforo = 'rojo';
+        }
+        else if (tipos.has('mantenimiento_proximo') ||
+            tipos.has('documento_15dias') ||
+            tipos.has('documento_30dias')) {
+            semaforo = 'amarillo';
+        }
+        else {
+            semaforo = 'verde';
+        }
+        await this.vehiculoRepo.update(vehiculoId, { estadoSemaforo: semaforo });
     }
 };
 exports.PlanesService = PlanesService;
 exports.PlanesService = PlanesService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(plan_mantenimiento_entity_1.PlanMantenimiento)),
+    __param(2, (0, typeorm_1.InjectRepository)(alerta_entity_1.Alerta)),
+    __param(3, (0, typeorm_1.InjectRepository)(vehiculo_entity_1.Vehiculo)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
-        vehiculos_service_1.VehiculosService])
+        vehiculos_service_1.VehiculosService,
+        typeorm_2.Repository,
+        typeorm_2.Repository])
 ], PlanesService);
 //# sourceMappingURL=planes.service.js.map

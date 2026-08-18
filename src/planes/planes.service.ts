@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { PlanMantenimiento, TipoCiclo } from './plan-mantenimiento.entity';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { VehiculosService } from '../vehiculos/vehiculos.service';
+import { Alerta } from '../alertas/alerta.entity';
+import { Vehiculo } from '../vehiculos/vehiculo.entity';
 
 @Injectable()
 export class PlanesService {
@@ -11,6 +13,10 @@ export class PlanesService {
     @InjectRepository(PlanMantenimiento)
     private readonly repo: Repository<PlanMantenimiento>,
     private readonly vehiculosService: VehiculosService,
+    @InjectRepository(Alerta)
+    private readonly alertaRepo: Repository<Alerta>,
+    @InjectRepository(Vehiculo)
+    private readonly vehiculoRepo: Repository<Vehiculo>,
   ) {}
 
   async crear(vehiculoId: number, dto: CreatePlanDto): Promise<PlanMantenimiento> {
@@ -135,5 +141,45 @@ export class PlanesService {
     }
 
     await this.repo.save(plan);
+
+    // 1. Limpiar alertas activas para este plan
+    await this.alertaRepo.update(
+      { plan: { id: planId }, leida: false },
+      { leida: true },
+    );
+
+    // 2. Recalcular semáforo del vehículo
+    if (plan.vehiculo?.id) {
+      await this.recalcularSemaforo(plan.vehiculo.id);
+    }
+  }
+
+  private async recalcularSemaforo(vehiculoId: number): Promise<void> {
+    const alertasActivas = await this.alertaRepo.find({
+      where: { vehiculo: { id: vehiculoId }, leida: false },
+      select: ['tipoAlerta'],
+    });
+
+    const tipos = new Set(alertasActivas.map((a) => a.tipoAlerta));
+
+    let semaforo: string;
+
+    if (
+      tipos.has('mantenimiento_vencido' as any) ||
+      tipos.has('documento_vencido' as any) ||
+      tipos.has('documento_7dias' as any)
+    ) {
+      semaforo = 'rojo';
+    } else if (
+      tipos.has('mantenimiento_proximo' as any) ||
+      tipos.has('documento_15dias' as any) ||
+      tipos.has('documento_30dias' as any)
+    ) {
+      semaforo = 'amarillo';
+    } else {
+      semaforo = 'verde';
+    }
+
+    await this.vehiculoRepo.update(vehiculoId, { estadoSemaforo: semaforo as any });
   }
 }
