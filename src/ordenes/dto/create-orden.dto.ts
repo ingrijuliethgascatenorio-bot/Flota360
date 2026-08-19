@@ -1,7 +1,8 @@
 import {
-  IsInt, IsOptional, IsString, IsNumber, Min, IsArray, ValidateNested,
+  IsInt, IsOptional, IsString, IsNumber, Min, IsArray, ValidateNested, IsEnum, IsDateString,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { TipoMantenimiento } from '../orden-trabajo.entity';
 
 export class RepuestoDto {
   @IsString()
@@ -22,6 +23,12 @@ export class CreateOrdenDto {
 
   @IsInt()
   tecnicoId: number;
+
+  @IsEnum(TipoMantenimiento)
+  tipoMantenimiento: TipoMantenimiento;
+
+  @IsDateString()
+  fechaOrden: string;
 
   @IsOptional()
   @IsInt()

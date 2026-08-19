@@ -6,8 +6,12 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { OrdenTrabajo, EstadoOrden } from './orden-trabajo.entity';
+import { OrdenTrabajo, EstadoOrden, TipoMantenimiento } from './orden-trabajo.entity';
 import { RepuestoOrden } from './repuesto-orden.entity';
+import { DocumentoLegal } from '../documentos/documento-legal.entity';
+import { AsignacionConductor } from '../asignaciones/asignacion_conductor.entity';
+import { PlanMantenimiento } from '../planes/plan-mantenimiento.entity';
+import { DisponibilidadService } from './disponibilidad.service';
 import {
   CreateOrdenDto,
   UpdateEstadoDto,
@@ -26,24 +30,91 @@ export class OrdenesService {
     private readonly planesService: PlanesService,
   ) {}
 
-  async crear(dto: CreateOrdenDto): Promise<OrdenTrabajo> {
-    const orden = this.ordenRepo.create({
-      vehiculo: { id: dto.vehiculoId } as any,
-      tecnico: { id: dto.tecnicoId } as any,
-      plan: dto.planId ? ({ id: dto.planId } as any) : null,
-      fechaApertura: new Date().toISOString().split('T')[0],
-      descripcion: dto.descripcion ?? null,
-      costoManoObra: dto.costoManoObra ?? 0,
-      estado: EstadoOrden.ABIERTA,
-    });
-
-    const guardada = await this.ordenRepo.save(orden);
-
-    if (dto.repuestos?.length) {
-      await this.agregarRepuestos(guardada.id, dto.repuestos);
+  async crear(dto: CreateOrdenDto): Promise<any> {
+    const hoy = new Date().toISOString().split('T')[0];
+    if (dto.fechaOrden < hoy) {
+      throw new BadRequestException('La fecha programada no puede ser anterior a la fecha actual.');
     }
 
-    return this.buscarPorId(guardada.id);
+    return await this.ordenRepo.manager.transaction(async (manager) => {
+      const transDocRepo = manager.getRepository(DocumentoLegal);
+      const transAsigRepo = manager.getRepository(AsignacionConductor);
+      const transPlanRepo = manager.getRepository(PlanMantenimiento);
+      const transOrdenRepo = manager.getRepository(OrdenTrabajo);
+      const transRepuestoRepo = manager.getRepository(RepuestoOrden);
+
+      const dispService = new DisponibilidadService(
+        transDocRepo,
+        transAsigRepo,
+        transPlanRepo,
+        transOrdenRepo,
+      );
+
+      // Validaciones de plan si es preventivo
+      if (dto.tipoMantenimiento === TipoMantenimiento.PREVENTIVO) {
+        await dispService.validarPlanPreventivo(dto.vehiculoId, dto.planId);
+      } else {
+        dto.planId = undefined;
+      }
+
+      // Buscar fecha disponible
+      const disp = await dispService.buscarFechaDisponible(
+        dto.vehiculoId,
+        dto.planId ?? null,
+        dto.tipoMantenimiento,
+        dto.fechaOrden,
+      );
+
+      const orden = transOrdenRepo.create({
+        vehiculo: { id: dto.vehiculoId } as any,
+        tecnico: { id: dto.tecnicoId } as any,
+        plan: dto.planId ? ({ id: dto.planId } as any) : null,
+        tipoMantenimiento: dto.tipoMantenimiento,
+        fechaOrden: disp.fecha,
+        fechaApertura: hoy,
+        descripcion: dto.descripcion ?? null,
+        costoManoObra: dto.costoManoObra ?? 0,
+        estado: EstadoOrden.ABIERTA,
+      });
+
+      const guardada = await transOrdenRepo.save(orden);
+
+      if (dto.repuestos?.length) {
+        for (const r of dto.repuestos) {
+          const repuesto = transRepuestoRepo.create({
+            orden: guardada,
+            nombreRepuesto: r.nombreRepuesto,
+            cantidad: r.cantidad,
+            precioUnitario: r.precioUnitario,
+          });
+          await transRepuestoRepo.save(repuesto);
+        }
+
+        await manager.query(
+          `UPDATE orden_trabajo 
+           SET costo_total = COALESCE(costo_mano_obra, 0) + (
+             SELECT COALESCE(SUM(subtotal), 0) 
+             FROM repuesto_orden 
+             WHERE orden_id = $1
+           )
+           WHERE id = $1`,
+          [guardada.id],
+        );
+      }
+
+      const ordenFinal = await transOrdenRepo.findOne({
+        where: { id: guardada.id },
+        relations: ['vehiculo', 'tecnico', 'plan', 'repuestos', 'fotos'],
+      });
+
+      return {
+        orden: ordenFinal,
+        fechaSolicitada: dto.fechaOrden,
+        fechaOrden: disp.fecha,
+        reprogramada: disp.reprogramada,
+        motivo: disp.motivo,
+      };
+    });
   }
 
   async buscarPorId(id: number): Promise<OrdenTrabajo> {
@@ -59,7 +130,7 @@ export class OrdenesService {
     const where = vehiculoId ? { vehiculo: { id: vehiculoId } } : {};
     return this.ordenRepo.find({
       where,
-      relations: ['vehiculo', 'tecnico', 'repuestos', 'fotos'],
+      relations: ['vehiculo', 'tecnico', 'repuestos', 'fotos', 'plan'],
       order: { createdAt: 'DESC' },
     });
   }

@@ -770,6 +770,23 @@
     <div class="modal-body">
       <form id="f-orden">
         <div class="field-group"><label>Vehículo *</label><select id="ord-veh" name="vehiculoId" required><option value="">— Seleccione —</option></select></div>
+        <div class="field-group">
+          <label>Tipo de mantenimiento *</label>
+          <select id="ord-tipo" name="tipoMantenimiento" required>
+            <option value="Correctivo">Correctivo</option>
+            <option value="Preventivo">Preventivo</option>
+          </select>
+        </div>
+        <div class="field-group" id="group-ord-plan" style="display: none;">
+          <label>Plan de mantenimiento *</label>
+          <select id="ord-plan" name="planId">
+            <option value="">— Seleccione plan —</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Fecha programada *</label>
+          <input type="date" id="ord-fecha" name="fechaOrden" required />
+        </div>
         <div class="field-group"><label>Técnico</label><select id="ord-tec" name="tecnicoId"><option value="">Sin asignar</option></select></div>
         <div class="field-group"><label>Descripción</label><textarea name="descripcion" rows="3" placeholder="Detalle el trabajo a realizar…"></textarea></div>
         <div class="modal-footer">

@@ -7,6 +7,7 @@ import {
   ManyToOne,
   OneToMany,
   JoinColumn,
+  Index,
 } from 'typeorm';
 import { Vehiculo } from '../vehiculos/vehiculo.entity';
 import { Usuario } from '../usuarios/usuario.entity';
@@ -27,7 +28,13 @@ export enum EstadoOrden {
   CANCELADA = 'Cancelada',
 }
 
+export enum TipoMantenimiento {
+  PREVENTIVO = 'Preventivo',
+  CORRECTIVO = 'Correctivo',
+}
+
 @Entity('orden_trabajo')
+@Index('idx_orden_trabajo_vehiculo_fecha', ['vehiculo', 'fechaOrden'])
 export class OrdenTrabajo {
   @PrimaryGeneratedColumn()
   id: number;
@@ -43,6 +50,21 @@ export class OrdenTrabajo {
   @ManyToOne(() => PlanMantenimiento, { nullable: true })
   @JoinColumn({ name: 'plan_id' })
   plan: PlanMantenimiento | null;
+
+  @Column({
+    name: 'tipo_mantenimiento',
+    type: 'varchar',
+    length: 20,
+    nullable: true,
+  })
+  tipoMantenimiento: TipoMantenimiento | null;
+
+  @Column({
+    name: 'fecha_orden',
+    type: 'date',
+    nullable: true,
+  })
+  fechaOrden: string | null;
 
   @Column({ name: 'fecha_apertura', type: 'date' })
   fechaApertura: string;

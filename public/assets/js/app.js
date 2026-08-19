@@ -828,17 +828,71 @@ document.getElementById('f-orden').addEventListener('submit', async e => {
   e.preventDefault();
   const b = Object.fromEntries(new FormData(e.target));
   b.vehiculoId = +b.vehiculoId; b.tecnicoId = +b.tecnicoId;
+  if (b.planId) b.planId = +b.planId;
+  else delete b.planId;
   // FIX: el admin NO ingresa costo de mano de obra — eso solo lo sabe el técnico.
   // Se crea la orden con costoManoObra = 0 por defecto.
   b.costoManoObra = 0;
   delete b.costoManoObra_admin; // limpiar por si hay campo residual
   if (!b.vehiculoId || !b.tecnicoId) { toast('Selecciona vehículo y técnico', 'error'); return; }
   try {
-    await api('POST', '/ordenes', b);
-    toast('Orden creada — el técnico asignado registrará los costos', 'success');
-    closeModal('m-orden'); e.target.reset(); cargarOrdenes();
+    const res = await api('POST', '/ordenes', b);
+    if (res && res.reprogramada) {
+      toast(`La fecha solicitada no estaba disponible. El mantenimiento fue programado para el ${res.fechaOrden} debido a la asignación del vehículo.`, 'warning');
+    } else {
+      toast('Orden creada — el técnico asignado registrará los costos', 'success');
+    }
+    closeModal('m-orden'); e.target.reset(); 
+    document.getElementById('group-ord-plan').style.display = 'none';
+    document.getElementById('ord-plan').removeAttribute('required');
+    cargarOrdenes();
   } catch (err) { toast(err.message, 'error'); }
 });
+
+document.getElementById('ord-tipo').addEventListener('change', e => {
+  const tipo = e.target.value;
+  const planGroup = document.getElementById('group-ord-plan');
+  const planSelect = document.getElementById('ord-plan');
+  
+  if (tipo === 'Preventivo') {
+    planGroup.style.display = 'block';
+    planSelect.setAttribute('required', 'required');
+    const vehId = document.getElementById('ord-veh').value;
+    if (vehId) {
+      cargarPlanesParaOrden(+vehId);
+    }
+  } else {
+    planGroup.style.display = 'none';
+    planSelect.removeAttribute('required');
+    planSelect.value = '';
+  }
+});
+
+document.getElementById('ord-veh').addEventListener('change', e => {
+  const vehId = e.target.value;
+  const tipo = document.getElementById('ord-tipo').value;
+  const planSelect = document.getElementById('ord-plan');
+  planSelect.innerHTML = '<option value="">— Seleccione plan —</option>';
+  
+  if (tipo === 'Preventivo' && vehId) {
+    cargarPlanesParaOrden(+vehId);
+  }
+});
+
+async function cargarPlanesParaOrden(vehiculoId) {
+  const select = document.getElementById('ord-plan');
+  if (!select) return;
+  select.innerHTML = '<option value="">— Cargando planes… —</option>';
+  try {
+    const res = await api('GET', `/vehiculos/${vehiculoId}/planes`);
+    const planes = res.data || res || [];
+    select.innerHTML = '<option value="">— Seleccione plan —</option>' +
+      planes.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+  } catch (err) {
+    select.innerHTML = '<option value="">— Error al cargar planes —</option>';
+    toast('Error al cargar planes: ' + err.message, 'error');
+  }
+}
 
 // ══════════════════════════════════════════════════
 // USUARIOS + FILTROS
