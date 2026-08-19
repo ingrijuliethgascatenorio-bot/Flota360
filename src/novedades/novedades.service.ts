@@ -12,6 +12,7 @@ import { CreateNovedadDto } from './dto/create-novedad.dto';
 import { AprobarNovedadDto, RechazarNovedadDto, FiltrarNovedadesDto } from './dto/aprobar-novedad.dto';
 import { AsignacionesService } from '../asignaciones/asignaciones.service';
 import { OrdenesService } from '../ordenes/ordenes.service';
+import { TipoMantenimiento } from '../ordenes/orden-trabajo.entity';
 
 @Injectable()
 export class NovedadesService {
@@ -121,6 +122,8 @@ export class NovedadesService {
     // Generar descripción automática de la OT a partir de la novedad
     const descripcionOT = this.generarDescripcionOT(novedad);
 
+    const hoy = new Date().toISOString().split('T')[0];
+
     // Crear la Orden de Trabajo en estado ABIERTA
     // Se reutiliza OrdenesService.crear() que ya existe y ya maneja el estado inicial
     const orden = await this.ordenesService.crear({
@@ -128,7 +131,9 @@ export class NovedadesService {
       tecnicoId:    dto.tecnicoId,
       descripcion:  descripcionOT,
       costoManoObra: 0,   // el técnico lo completará más adelante
-      // planId: undefined → no viene de un plan de mantenimiento
+      tipoMantenimiento: TipoMantenimiento.CORRECTIVO,
+      fechaOrden: hoy,
+      planId: undefined, // no viene de un plan de mantenimiento
     });
 
     // Actualizar la novedad: marcar como Aprobada y guardar referencia a la OT
