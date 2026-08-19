@@ -274,7 +274,7 @@ async function abrirFotosAntesEIniciar(id) {
   ordenEditId = id;
   fotosTemp   = [];
 
-  document.getElementById('fc-title').textContent = `Orden #${id} — <i class="fa-solid fa-camera"></i> Fotos ANTES de iniciar`;
+  document.getElementById('fc-title').innerHTML = `Orden #${id} — <i class="fa-solid fa-camera"></i> Fotos ANTES de iniciar`;
 
   // Ocultar sección costos/repuestos — solo fotos al iniciar
   const secCostos = document.getElementById('fc-seccion-costos');
@@ -290,7 +290,7 @@ async function abrirFotosAntesEIniciar(id) {
 
   // Texto del botón guardar
   const btn = document.getElementById('btn-guardar-costos');
-  if (btn) btn.textContent = '<i class="fa-solid fa-play"></i> Guardar fotos e Iniciar';
+  if (btn) btn.innerHTML = '<i class="fa-solid fa-play"></i> Guardar fotos e Iniciar';
 
   // Modo para que guardarCostos sepa qué hacer al terminar
   document.getElementById('m-form-costos').dataset.modo = 'iniciar';
@@ -307,7 +307,7 @@ async function abrirCostosYCerrar(id) {
   repuestosTemp = [];
   fotosTemp     = [];
 
-  document.getElementById('fc-title').textContent = `Orden #${id} — <i class="fa-solid fa-money-bill-wave"></i> Costos y fotos para cerrar`;
+  document.getElementById('fc-title').innerHTML = `Orden #${id} — <i class="fa-solid fa-money-bill-wave"></i> Costos y fotos para cerrar`;
 
   // Mostrar sección costos
   const secCostos = document.getElementById('fc-seccion-costos');
@@ -323,7 +323,7 @@ async function abrirCostosYCerrar(id) {
 
   // Texto del botón guardar
   const btn = document.getElementById('btn-guardar-costos');
-  if (btn) btn.textContent = '<i class="fa-solid fa-check"></i> Guardar y Cerrar orden';
+  if (btn) btn.innerHTML = '<i class="fa-solid fa-check"></i> Guardar y Cerrar orden';
 
   // Modo para que guardarCostos sepa qué hacer al terminar
   document.getElementById('m-form-costos').dataset.modo = 'cerrar';
