@@ -826,7 +826,15 @@ async function eliminarOrden(id) {
 
 document.getElementById('f-orden').addEventListener('submit', async e => {
   e.preventDefault();
+  // Temporarily enable ord-veh select so FormData includes it
+  const vehSelect = document.getElementById('ord-veh');
+  const wasDisabled = vehSelect.disabled;
+  vehSelect.disabled = false;
+
   const b = Object.fromEntries(new FormData(e.target));
+
+  if (wasDisabled) vehSelect.disabled = true;
+
   b.vehiculoId = +b.vehiculoId; b.tecnicoId = +b.tecnicoId;
   if (b.planId) b.planId = +b.planId;
   else delete b.planId;
@@ -845,49 +853,70 @@ document.getElementById('f-orden').addEventListener('submit', async e => {
     closeModal('m-orden'); e.target.reset(); 
     document.getElementById('group-ord-plan').style.display = 'none';
     document.getElementById('ord-plan').removeAttribute('required');
+    vehSelect.disabled = false;
     cargarOrdenes();
   } catch (err) { toast(err.message, 'error'); }
 });
 
-document.getElementById('ord-tipo').addEventListener('change', e => {
+let planesOrdenCache = [];
+
+document.getElementById('ord-tipo').addEventListener('change', async e => {
   const tipo = e.target.value;
   const planGroup = document.getElementById('group-ord-plan');
   const planSelect = document.getElementById('ord-plan');
+  const vehSelect = document.getElementById('ord-veh');
   
   if (tipo === 'Preventivo') {
     planGroup.style.display = 'block';
     planSelect.setAttribute('required', 'required');
-    const vehId = document.getElementById('ord-veh').value;
-    if (vehId) {
-      cargarPlanesParaOrden(+vehId);
-    }
+    vehSelect.value = '';
+    vehSelect.disabled = true;
+    await cargarTodosLosPlanesParaOrden();
   } else {
     planGroup.style.display = 'none';
     planSelect.removeAttribute('required');
     planSelect.value = '';
+    vehSelect.value = '';
+    vehSelect.disabled = false;
   }
 });
 
-document.getElementById('ord-veh').addEventListener('change', e => {
-  const vehId = e.target.value;
-  const tipo = document.getElementById('ord-tipo').value;
-  const planSelect = document.getElementById('ord-plan');
-  planSelect.innerHTML = '<option value="">— Seleccione plan —</option>';
+document.getElementById('ord-plan').addEventListener('change', e => {
+  const planId = +e.target.value;
+  const vehSelect = document.getElementById('ord-veh');
   
-  if (tipo === 'Preventivo' && vehId) {
-    cargarPlanesParaOrden(+vehId);
+  if (planId) {
+    const plan = planesOrdenCache.find(p => p.id === planId);
+    if (plan) {
+      vehSelect.value = plan.vehiculoId;
+    } else {
+      vehSelect.value = '';
+    }
+  } else {
+    vehSelect.value = '';
   }
 });
 
-async function cargarPlanesParaOrden(vehiculoId) {
+async function cargarTodosLosPlanesParaOrden() {
   const select = document.getElementById('ord-plan');
   if (!select) return;
   select.innerHTML = '<option value="">— Cargando planes… —</option>';
   try {
-    const res = await api('GET', `/vehiculos/${vehiculoId}/planes`);
-    const planes = res.data || res || [];
+    if (!vehCache || !vehCache.length) {
+      const r = await api('GET', '/vehiculos');
+      vehCache = Array.isArray(r) ? r : (r.data || []);
+    }
+    const vehiculos = vehCache || [];
+    const resultados = await Promise.all(
+      vehiculos.map(v =>
+        api('GET', `/vehiculos/${v.id}/planes`)
+          .then(r => (r.data ?? r).map(p => ({ ...p, vehiculoId: v.id, vehiculoPlaca: v.placa })))
+          .catch(() => [])
+      )
+    );
+    planesOrdenCache = resultados.flat();
     select.innerHTML = '<option value="">— Seleccione plan —</option>' +
-      planes.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+      planesOrdenCache.map(p => `<option value="${p.id}">${p.nombre} (${p.vehiculoPlaca})</option>`).join('');
   } catch (err) {
     select.innerHTML = '<option value="">— Error al cargar planes —</option>';
     toast('Error al cargar planes: ' + err.message, 'error');
