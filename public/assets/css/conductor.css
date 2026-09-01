@@ -2354,54 +2354,83 @@ body {
 .cierre-banner button:hover { background: #dbeafe; }
 
 /* ═══════════════════════════════════════════════════
-   MANTENIMIENTOS & MODAL STYLES (Conductor Portal)
+   MANTENIMIENTOS (Conductor Portal - Modern Clean Redesign)
 ═══════════════════════════════════════════════════ */
 
-/* Barra de Estadísticas KPI */
+/* Contenedor principal sin fondo encerrado */
+.mantenimientos-wrap {
+  background: transparent;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Cabecera limpia */
+.mantenimientos-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.mantenimientos-title {
+  font-family: var(--font2);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--navy);
+  margin: 0;
+  letter-spacing: -.3px;
+}
+
+.mantenimientos-sub {
+  font-size: 13px;
+  color: var(--text-md);
+  margin-top: 3px;
+}
+
+/* Barra de Estadísticas KPI limpias y modernas */
 .mant-stats-bar {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 12px;
-  margin-top: 14px;
 }
 
 .mant-stat-box {
-  background: var(--white);
-  border: 1.5px solid var(--border);
-  border-radius: var(--r12);
-  padding: 14px 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 12px 14px;
   display: flex;
   align-items: center;
-  gap: 14px;
-  box-shadow: var(--sh0);
-  transition: transform .15s, border-color .15s;
+  gap: 12px;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.03);
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
 }
 
 .mant-stat-box:hover {
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+  border-color: #cbd5e1;
 }
 
-.mant-stat-box.total { border-left: 4px solid var(--navy); }
-.mant-stat-box.prev { border-left: 4px solid var(--blue); }
-.mant-stat-box.corr { border-left: 4px solid var(--yellow); }
-
 .mant-sb-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--r8);
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
-.mant-stat-box.total .mant-sb-icon { background: #f0f4f8; color: var(--navy); }
-.mant-stat-box.prev .mant-sb-icon { background: #e8f4ff; color: var(--blue); }
-.mant-stat-box.corr .mant-sb-icon { background: #fef3c7; color: #b45309; }
+.mant-stat-box.total .mant-sb-icon { background: #f1f5f9; color: #334155; }
+.mant-stat-box.prev .mant-sb-icon { background: #eff6ff; color: #2563eb; }
+.mant-stat-box.corr .mant-sb-icon { background: #fff7ed; color: #ea580c; }
 
 .mant-sb-icon svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   stroke: currentColor;
   stroke-width: 2;
   fill: none;
@@ -2410,56 +2439,146 @@ body {
 .mant-sb-num {
   font-family: var(--font2);
   font-size: 20px;
-  font-weight: 700;
-  color: var(--navy);
-  line-height: 1.1;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
 }
 
 .mant-sb-lbl {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
-  color: var(--text-lt);
+  color: #64748b;
   text-transform: uppercase;
-  letter-spacing: .3px;
-  margin-top: 2px;
+  letter-spacing: .4px;
+  margin-top: 3px;
 }
 
-/* Filtros */
+/* Área de Filtros sin fondo blanco pesado */
 .mantenimientos-filtros {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
   align-items: flex-end;
-  padding: 14px 16px;
-  background: var(--slate-100);
-  border-radius: var(--r12);
-  margin-top: 14px;
+  background: transparent;
+  padding: 0;
+  margin-top: 4px;
 }
 
+.mant-flt-input-group {
+  flex: 2;
+  min-width: 200px;
+}
+
+.mant-flt-select-group {
+  flex: 1;
+  min-width: 150px;
+}
+
+.mant-flt-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 6px;
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+
+.mant-search-box {
+  position: relative;
+  width: 100%;
+}
+
+.mant-search-ico {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  stroke: #94a3b8;
+  stroke-width: 2;
+  fill: none;
+  pointer-events: none;
+}
+
+.mant-search-input {
+  width: 100%;
+  height: 42px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0 14px 0 38px;
+  font-family: inherit;
+  font-size: 13px;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+  outline: none;
+  transition: all .2s ease;
+}
+
+.mant-search-input::placeholder {
+  color: #94a3b8;
+  font-size: 12.5px;
+}
+
+.mant-search-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+  background: #ffffff;
+}
+
+.mant-select-box {
+  position: relative;
+  width: 100%;
+}
+
+.mant-select-input {
+  width: 100%;
+  height: 42px;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-family: inherit;
+  font-size: 13px;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+  outline: none;
+  cursor: pointer;
+  transition: all .2s ease;
+}
+
+.mant-select-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+/* Grilla de Tarjetas */
 .mant-cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 16px;
+  margin-top: 4px;
 }
 
-/* Tarjeta de Mantenimiento Rediseñada */
+/* Tarjeta de Orden de Trabajo Moderna y Elegante */
 .mant-card {
-  background: var(--white);
-  border: 1.5px solid var(--border);
-  border-radius: var(--r16);
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  box-shadow: var(--sh0);
-  transition: transform .2s, box-shadow .2s, border-color .2s;
-  position: relative;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
 }
 
 .mant-card:hover {
   transform: translateY(-2px);
-  box-shadow: var(--sh1);
-  border-color: #93c5fd;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+  border-color: #cbd5e1;
 }
 
 .mant-card-top {
@@ -2467,23 +2586,23 @@ body {
   justify-content: space-between;
   align-items: center;
   padding-bottom: 8px;
-  border-bottom: 1px dashed var(--border);
+  border-bottom: 1px dashed #f1f5f9;
 }
 
 .mant-ot-num {
   font-family: var(--font2);
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--navy);
-  letter-spacing: .3px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -.2px;
 }
 
 .mant-status-pill {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 8px;
-  border-radius: var(--r99);
+  padding: 3px 9px;
+  border-radius: 9999px;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -2491,45 +2610,45 @@ body {
 }
 
 .mant-status-pill.closed {
-  background: #dcfce7;
-  color: #15803d;
-  border: 1px solid #86efac;
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
 }
 
 .mant-dot-closed {
   width: 6px;
   height: 6px;
-  background: #16a34a;
+  background: #10b981;
   border-radius: 50%;
 }
 
 .mant-veh-header {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-top: 2px;
 }
 
 .mant-placa-badge {
-  background: var(--navy);
-  color: #fff;
+  background: #0f172a;
+  color: #ffffff;
   font-family: var(--font2);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
   padding: 3px 8px;
-  border-radius: var(--r6);
+  border-radius: 6px;
   letter-spacing: .6px;
 }
 
 .mant-veh-name {
   font-size: 13px;
   font-weight: 600;
-  color: var(--navy);
+  color: #1e293b;
 }
 
 .mant-veh-anio {
   font-weight: 400;
-  color: var(--text-lt);
+  color: #64748b;
 }
 
 .mant-tipo-line {
@@ -2540,8 +2659,8 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 8px;
-  border-radius: var(--r6);
+  padding: 3px 10px;
+  border-radius: 9999px;
   font-size: 11px;
   font-weight: 600;
 }
@@ -2553,14 +2672,15 @@ body {
 }
 
 .mant-badge.correctivo {
-  background: #fef3c7;
-  color: #92400e;
+  background: #fffbeb;
+  color: #b45309;
   border: 1px solid #fde68a;
 }
 
 .mant-card-info-grid {
-  background: var(--slate-100);
-  border-radius: var(--r8);
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
   padding: 10px 12px;
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -2575,7 +2695,7 @@ body {
 
 .mant-grid-cell.full-w {
   grid-column: 1 / -1;
-  border-top: 1px solid rgba(0,0,0,0.06);
+  border-top: 1px solid #e2e8f0;
   padding-top: 6px;
   margin-top: 2px;
 }
@@ -2583,15 +2703,15 @@ body {
 .mg-lbl {
   font-size: 10px;
   font-weight: 600;
-  color: var(--text-lt);
+  color: #64748b;
   text-transform: uppercase;
-  letter-spacing: .2px;
+  letter-spacing: .3px;
 }
 
 .mg-val {
   font-size: 12px;
   font-weight: 600;
-  color: var(--navy);
+  color: #0f172a;
   margin-top: 1px;
   white-space: nowrap;
   overflow: hidden;
@@ -2599,14 +2719,14 @@ body {
 }
 
 .mg-val.cost {
-  color: var(--blue);
-  font-size: 14px;
+  color: #2563eb;
+  font-size: 13.5px;
   font-weight: 700;
 }
 
 .mant-trabajo-preview {
   font-size: 11.5px;
-  color: var(--text-md);
+  color: #475569;
   line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2620,7 +2740,7 @@ body {
   gap: 8px;
   margin-top: auto;
   padding-top: 10px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid #f1f5f9;
 }
 
 .mant-card-actions .btn-sm {
@@ -2632,9 +2752,9 @@ body {
   padding: 7px 10px;
   font-size: 11.5px;
   font-weight: 600;
-  border-radius: var(--r8);
+  border-radius: 8px;
   cursor: pointer;
-  transition: all .15s;
+  transition: all .15s ease;
 }
 
 /* ── MODAL ENGINE & SECCIONES ───────────────────── */

@@ -487,11 +487,11 @@
 
   <!-- ██  MANTENIMIENTOS  ██ -->
   <section id="page-mantenimientos" class="page">
-    <div class="c-section-card">
-      <div class="c-section-hdr" style="margin-bottom:12px">
+    <div class="mantenimientos-wrap">
+      <div class="mantenimientos-hdr">
         <div>
-          <h2 class="c-section-title">📄 Mantenimientos</h2>
-          <p class="c-section-sub">Historial de órdenes de trabajo cerradas de tus vehículos asociados</p>
+          <h2 class="mantenimientos-title">📄 Mantenimientos</h2>
+          <p class="mantenimientos-sub">Historial de órdenes de trabajo cerradas de tus vehículos asociados</p>
         </div>
       </div>
 
@@ -528,29 +528,31 @@
 
       <!-- Filtros -->
       <div class="mantenimientos-filtros">
-        <div class="c-flt-group" style="flex:2;min-width:200px">
-          <label style="font-size:11px;font-weight:600;color:var(--text-lt);margin-bottom:4px;display:block">Buscar</label>
-          <div style="position:relative">
-            <input type="text" id="search-mant-cond" class="c-input" placeholder="Buscar por placa, técnico o trabajo…" oninput="filtrarMantenimientosCond()" style="padding-left:34px;width:100%"/>
-            <svg viewBox="0 0 24 24" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:var(--text-lt);stroke-width:2;fill:none"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <div class="c-flt-group mant-flt-input-group">
+          <label class="mant-flt-label">Buscar</label>
+          <div class="mant-search-box">
+            <svg viewBox="0 0 24 24" class="mant-search-ico"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="search-mant-cond" class="mant-search-input" placeholder="Buscar por placa, técnico o trabajo…" oninput="filtrarMantenimientosCond()"/>
           </div>
         </div>
-        <div class="c-flt-group" style="flex:1;min-width:160px">
-          <label style="font-size:11px;font-weight:600;color:var(--text-lt);margin-bottom:4px;display:block">Tipo de mantenimiento</label>
-          <select id="tipo-mant-cond" class="c-input" onchange="filtrarMantenimientosCond()" style="width:100%">
-            <option value="">Todos los tipos</option>
-            <option value="Preventivo">Preventivo</option>
-            <option value="Correctivo">Correctivo</option>
-          </select>
+        <div class="c-flt-group mant-flt-select-group">
+          <label class="mant-flt-label">Tipo de mantenimiento</label>
+          <div class="mant-select-box">
+            <select id="tipo-mant-cond" class="mant-select-input" onchange="filtrarMantenimientosCond()">
+              <option value="">Todos los tipos</option>
+              <option value="Preventivo">Preventivo</option>
+              <option value="Correctivo">Correctivo</option>
+            </select>
+          </div>
         </div>
       </div>
 
       <!-- Lista de mantenimientos -->
-      <div id="mant-list-container" class="mant-cards-grid" style="margin-top:16px">
+      <div id="mant-list-container" class="mant-cards-grid">
         <div class="td-loading">Cargando mantenimientos…</div>
       </div>
 
-      <div id="c-mant-pagination" class="c-pagination" style="margin-top:16px"></div>
+      <div id="c-mant-pagination" class="c-pagination"></div>
     </div>
   </section>
 
