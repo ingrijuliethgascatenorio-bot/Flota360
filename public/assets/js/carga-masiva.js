@@ -23,6 +23,19 @@
 // PLANTILLAS EXCEL — descargables antes de hacer la carga
 // ══════════════════════════════════════════════════════════════════════════════
 
+function descargarPlantillaExcel(tipo) {
+  if (typeof XLSX === 'undefined') {
+    const notify = typeof showToast === 'function' ? showToast : (typeof toast === 'function' ? toast : alert);
+    notify('Librería Excel cargando, por favor intenta en un momento', 'info');
+    return;
+  }
+  if (tipo === 'usuarios') {
+    descargarPlantillaUsuarios();
+  } else {
+    descargarPlantillaBuses();
+  }
+}
+
 function descargarPlantillaUsuarios() {
   const wb = XLSX.utils.book_new();
   const encabezados = [['nombre','correo','contrasena','rol']];
@@ -71,7 +84,7 @@ function descargarPlantillaBuses() {
   ], { origin: 'L1' });
 
   XLSX.utils.book_append_sheet(wb, ws, 'Buses');
-  XLSX.writeFile(wb, 'plantilla_buses.xlsx');
+  XLSX.writeFile(wb, 'plantilla_vehiculos.xlsx');
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -89,18 +102,64 @@ function parsearArchivoExcel(file) {
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
         
-        // Normalizar fechas (si vienen como objetos Date de JS)
+        // Normalizar filas y campos comunes
         const normalized = rows.map(row => {
+          const cleanRow = {};
+          for (const key of Object.keys(row)) {
+            const cleanKey = key.trim();
+            cleanRow[cleanKey] = row[key];
+          }
+
+          // Mapeos de nombres de columnas frecuentes
+          if (cleanRow['contraseña'] !== undefined && cleanRow['contrasena'] === undefined) {
+            cleanRow['contrasena'] = cleanRow['contraseña'];
+          }
+          if (cleanRow['año'] !== undefined && cleanRow['anio'] === undefined) {
+            cleanRow['anio'] = cleanRow['año'];
+          }
+          if (cleanRow['km'] !== undefined && cleanRow['kmActual'] === undefined) {
+            cleanRow['kmActual'] = cleanRow['km'];
+          }
+          if (cleanRow['km_actual'] !== undefined && cleanRow['kmActual'] === undefined) {
+            cleanRow['kmActual'] = cleanRow['km_actual'];
+          }
+          if (cleanRow['num_motor'] !== undefined && cleanRow['numMotor'] === undefined) {
+            cleanRow['numMotor'] = cleanRow['num_motor'];
+          }
+          if (cleanRow['num_chasis'] !== undefined && cleanRow['numChasis'] === undefined) {
+            cleanRow['numChasis'] = cleanRow['num_chasis'];
+          }
+          if (cleanRow['vence_soat'] !== undefined && cleanRow['venceSoat'] === undefined) {
+            cleanRow['venceSoat'] = cleanRow['vence_soat'];
+          }
+          if (cleanRow['vence_tecnomecanica'] !== undefined && cleanRow['venceTecnomecanica'] === undefined) {
+            cleanRow['venceTecnomecanica'] = cleanRow['vence_tecnomecanica'];
+          }
+
+          // Normalizar rol (ej. "Técnico" -> "Tecnico")
+          if (cleanRow['rol']) {
+            const rStr = cleanRow['rol'].toString().trim();
+            if (rStr.toLowerCase() === 'tecnico' || rStr.toLowerCase() === 'técnico') cleanRow['rol'] = 'Tecnico';
+            else if (rStr.toLowerCase() === 'administrador' || rStr.toLowerCase() === 'admin') cleanRow['rol'] = 'Administrador';
+            else if (rStr.toLowerCase() === 'conductor') cleanRow['rol'] = 'Conductor';
+          }
+
           ['venceSoat', 'venceTecnomecanica'].forEach(k => {
-            if (row[k] instanceof Date) {
-              row[k] = row[k].toISOString().split('T')[0];
-            } else if (typeof row[k] === 'number') {
-              // Manejar números de serie de Excel por si acaso
-              const d = new Date((row[k] - 25569) * 86400 * 1000);
-              row[k] = d.toISOString().split('T')[0];
+            if (cleanRow[k] instanceof Date) {
+              const d = cleanRow[k];
+              const yyyy = d.getUTCFullYear();
+              const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+              const dd = String(d.getUTCDate()).padStart(2, '0');
+              cleanRow[k] = `${yyyy}-${mm}-${dd}`;
+            } else if (typeof cleanRow[k] === 'number') {
+              const d = new Date((cleanRow[k] - 25569) * 86400 * 1000);
+              const yyyy = d.getUTCFullYear();
+              const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+              const dd = String(d.getUTCDate()).padStart(2, '0');
+              cleanRow[k] = `${yyyy}-${mm}-${dd}`;
             }
           });
-          return row;
+          return cleanRow;
         });
         
         res(normalized);
@@ -115,7 +174,9 @@ function validarFilaUsuario(row, idx) {
   const errs = [];
   if (!row.nombre?.toString().trim())      errs.push('nombre requerido');
   if (!row.correo?.toString().trim())      errs.push('correo requerido');
-  if (!row.contrasena?.toString().trim())  errs.push('contraseña requerida');
+  const pass = (row.contrasena ?? row['contraseña'])?.toString().trim();
+  if (!pass)                              errs.push('contraseña requerida');
+  else if (pass.length < 8)               errs.push('contraseña mín. 8 caracteres');
   const rol = row.rol?.toString().trim();
   if (!ROLES_VALIDOS.includes(rol))        errs.push(`rol inválido (${rol || 'vacío'})`);
   return errs.length ? `Fila ${idx + 2}: ${errs.join(', ')}` : null;
@@ -126,9 +187,9 @@ function validarFilaBus(row, idx) {
   if (!row.placa?.toString().trim())      errs.push('placa requerida');
   if (!row.marca?.toString().trim())      errs.push('marca requerida');
   if (!row.modelo?.toString().trim())     errs.push('modelo requerido');
-  const anio = parseInt(row.anio);
+  const anio = parseInt(row.anio ?? row['año']);
   if (isNaN(anio) || anio < 1990)         errs.push('año inválido (mín 1990)');
-  const km = parseInt(row.kmActual ?? 0);
+  const km = parseInt(row.kmActual ?? row.km ?? 0);
   if (isNaN(km) || km < 0)               errs.push('kmActual inválido');
   const cap = parseInt(row.capacidad);
   if (isNaN(cap) || cap < 1)             errs.push('capacidad inválida');
@@ -152,7 +213,202 @@ function validarFilaBus(row, idx) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// PREVISUALIZACIÓN DEL ARCHIVO
+// PREVISUALIZACIÓN Y CARGA DIRECTA (WIDGET INLINE EN ADMIN)
+// ══════════════════════════════════════════════════════════════════════════════
+
+let _bulkInlineCache = {
+  vehiculos: { data: [], errores: [], file: null },
+  usuarios: { data: [], errores: [], file: null }
+};
+
+async function previewBulk(input, tipo) {
+  const normTipo = (tipo === 'vehiculos' || tipo === 'buses') ? 'vehiculos' : 'usuarios';
+  const previewId = normTipo === 'vehiculos' ? 'preview-bulk-veh' : 'preview-bulk-usr';
+  const btnId = normTipo === 'vehiculos' ? 'btn-bulk-veh' : 'btn-bulk-usr';
+  const filenameId = normTipo === 'vehiculos' ? 'bc-filename-veh' : 'bc-filename-usr';
+  
+  const previewEl = document.getElementById(previewId);
+  const btnEl = document.getElementById(btnId);
+  const filenameEl = document.getElementById(filenameId);
+
+  const file = input?.files?.[0];
+  if (!file) {
+    if (previewEl) previewEl.innerHTML = '';
+    if (filenameEl) filenameEl.innerText = 'Seleccionar archivo .xlsx';
+    if (btnEl && normTipo === 'usuarios') btnEl.style.display = 'none';
+    _bulkInlineCache[normTipo] = { data: [], errores: [], file: null };
+    return;
+  }
+
+  if (filenameEl) filenameEl.innerText = file.name;
+  if (btnEl) btnEl.style.display = 'inline-flex';
+  if (previewEl) previewEl.innerHTML = '<div style="font-size:12px;color:var(--text-lt);margin-top:6px"><i class="fa-solid fa-spinner fa-spin"></i> Leyendo y validando archivo…</div>';
+
+  try {
+    const rows = await parsearArchivoExcel(file);
+    if (!rows.length) {
+      if (previewEl) previewEl.innerHTML = '<div style="font-size:12px;color:var(--red);margin-top:6px"><i class="fa-solid fa-circle-exclamation"></i> El archivo está vacío.</div>';
+      _bulkInlineCache[normTipo] = { data: [], errores: ['El archivo está vacío'], file };
+      return;
+    }
+
+    const errores = rows.map((r, i) =>
+      normTipo === 'usuarios' ? validarFilaUsuario(r, i) : validarFilaBus(r, i)
+    ).filter(Boolean);
+
+    _bulkInlineCache[normTipo] = { data: rows, errores, file };
+
+    if (previewEl) {
+      if (errores.length > 0) {
+        previewEl.innerHTML = `
+          <div style="font-size:12px;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;padding:8px 10px;border-radius:6px;margin-top:6px">
+            <div style="font-weight:700;margin-bottom:4px"><i class="fa-solid fa-triangle-exclamation"></i> ${errores.length} fila(s) con errores:</div>
+            <div style="max-height:80px;overflow-y:auto;font-size:11px;line-height:1.4">
+              ${errores.slice(0, 4).map(e => `• ${e}`).join('<br>')}
+              ${errores.length > 4 ? `<br><em>… y ${errores.length - 4} más</em>` : ''}
+            </div>
+          </div>`;
+      } else {
+        previewEl.innerHTML = `
+          <div style="font-size:12px;color:#059669;background:#ecfdf5;border:1px solid #a7f3d0;padding:6px 10px;border-radius:6px;margin-top:6px;font-weight:600;display:flex;align-items:center;gap:6px">
+            <i class="fa-solid fa-circle-check"></i> ${rows.length} ${normTipo === 'vehiculos' ? 'vehículos' : 'usuarios'} listos para subir
+          </div>`;
+      }
+    }
+  } catch (err) {
+    if (previewEl) {
+      previewEl.innerHTML = `<div style="font-size:12px;color:var(--red);margin-top:6px"><i class="fa-solid fa-circle-xmark"></i> Error al leer archivo: ${err.message}</div>`;
+    }
+    _bulkInlineCache[normTipo] = { data: [], errores: [err.message], file };
+  }
+}
+
+async function subirBulk(tipo) {
+  const normTipo = (tipo === 'vehiculos' || tipo === 'buses') ? 'vehiculos' : 'usuarios';
+  const inputId = normTipo === 'vehiculos' ? 'fi-bulk-veh' : 'fi-bulk-usr';
+  const btnId = normTipo === 'vehiculos' ? 'btn-bulk-veh' : 'btn-bulk-usr';
+  const previewId = normTipo === 'vehiculos' ? 'preview-bulk-veh' : 'preview-bulk-usr';
+  const filenameId = normTipo === 'vehiculos' ? 'bc-filename-veh' : 'bc-filename-usr';
+
+  const inputEl = document.getElementById(inputId);
+  const btnEl = document.getElementById(btnId);
+  const previewEl = document.getElementById(previewId);
+  const filenameEl = document.getElementById(filenameId);
+
+  const file = inputEl?.files?.[0];
+  const notify = typeof showToast === 'function' ? showToast : (typeof toast === 'function' ? toast : alert);
+
+  if (!file) {
+    notify('Por favor selecciona un archivo .xlsx primero', 'warning');
+    return;
+  }
+
+  // Si no se ha parseado aún o cambió el archivo
+  if (!_bulkInlineCache[normTipo]?.data?.length || _bulkInlineCache[normTipo]?.file !== file) {
+    await previewBulk(inputEl, normTipo);
+  }
+
+  const { data, errores } = _bulkInlineCache[normTipo] || { data: [], errores: [] };
+
+  if (!data.length) {
+    notify('El archivo no contiene registros válidos para importar', 'error');
+    return;
+  }
+
+  if (errores.length > 0) {
+    notify(`El archivo contiene ${errores.length} error(es). Corrígelos antes de subir.`, 'error');
+    return;
+  }
+
+  const origBtnHtml = btnEl ? btnEl.innerHTML : '';
+  if (btnEl) {
+    btnEl.disabled = true;
+    btnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Subiendo…';
+  }
+
+  let ok = 0, fail = 0;
+  const failedRows = [];
+  const total = data.length;
+
+  for (let i = 0; i < total; i++) {
+    const row = data[i];
+    if (previewEl) {
+      previewEl.innerHTML = `<div style="font-size:12px;color:var(--text-lt);margin-top:6px"><i class="fa-solid fa-spinner fa-spin"></i> Subiendo ${i + 1} de ${total}…</div>`;
+    }
+    try {
+      if (normTipo === 'usuarios') {
+        await api('POST', '/usuarios', {
+          nombre: row.nombre.toString().trim(),
+          correo: row.correo.toString().trim(),
+          contrasena: (row.contrasena ?? row['contraseña']).toString().trim(),
+          rol: row.rol.toString().trim(),
+        });
+      } else {
+        await api('POST', '/vehiculos', {
+          placa: row.placa.toString().trim().toUpperCase(),
+          marca: row.marca.toString().trim(),
+          modelo: row.modelo.toString().trim(),
+          anio: parseInt(row.anio ?? row['año']),
+          kmActual: parseInt(row.kmActual ?? row.km ?? 0),
+          capacidad: parseInt(row.capacidad),
+          numMotor: row.numMotor.toString().trim(),
+          numChasis: row.numChasis.toString().trim(),
+          venceSoat: row.venceSoat.toString().trim(),
+          venceTecnomecanica: row.venceTecnomecanica.toString().trim(),
+        });
+      }
+      ok++;
+    } catch (err) {
+      fail++;
+      failedRows.push({ fila: i + 2, dato: normTipo === 'usuarios' ? (row.correo || row.nombre) : row.placa, error: err.message || 'Error al guardar' });
+    }
+  }
+
+  if (btnEl) {
+    btnEl.disabled = false;
+    btnEl.innerHTML = origBtnHtml;
+  }
+
+  if (ok > 0) {
+    notify(`✅ Carga completada: ${ok} ${normTipo === 'vehiculos' ? 'vehículos' : 'usuarios'} importados con éxito`, 'success');
+    if (normTipo === 'vehiculos') {
+      if (typeof cargarVehiculos === 'function') cargarVehiculos();
+      if (typeof cargarDashboard === 'function') cargarDashboard();
+    } else {
+      if (typeof cargarUsuarios === 'function') cargarUsuarios();
+    }
+  }
+
+  if (fail > 0 && ok === 0) {
+    notify(`❌ No se pudo importar ningún registro. Hubo ${fail} error(es).`, 'error');
+  } else if (fail > 0) {
+    notify(`⚠️ Se importaron ${ok} registros, pero fallaron ${fail}.`, 'warning');
+  }
+
+  if (previewEl) {
+    if (fail === 0) {
+      previewEl.innerHTML = `
+        <div style="font-size:12px;color:#059669;background:#ecfdf5;border:1px solid #a7f3d0;padding:6px 10px;border-radius:6px;margin-top:6px;font-weight:600;display:flex;align-items:center;gap:6px">
+          <i class="fa-solid fa-circle-check"></i> ¡Éxito! ${ok} registros importados.
+        </div>`;
+      if (inputEl) inputEl.value = '';
+      if (filenameEl) filenameEl.innerText = 'Seleccionar archivo .xlsx';
+      _bulkInlineCache[normTipo] = { data: [], errores: [], file: null };
+    } else {
+      previewEl.innerHTML = `
+        <div style="font-size:12px;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;padding:8px 10px;border-radius:6px;margin-top:6px">
+          <div style="font-weight:700;margin-bottom:4px"><i class="fa-solid fa-triangle-exclamation"></i> ${ok} exitosos, ${fail} fallidos:</div>
+          <div style="max-height:80px;overflow-y:auto;font-size:11px;line-height:1.4">
+            ${failedRows.slice(0, 4).map(f => `• Fila ${f.fila} (${f.dato}): ${f.error}`).join('<br>')}
+            ${failedRows.length > 4 ? `<br><em>… y ${failedRows.length - 4} más</em>` : ''}
+          </div>
+        </div>`;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// PREVISUALIZACIÓN DEL ARCHIVO (MODAL)
 // ══════════════════════════════════════════════════════════════════════════════
 
 let _cargaMasivaData   = [];   // filas parseadas listas para enviar
@@ -665,3 +921,14 @@ function _inyectarEstilos() {
   `;
   document.head.appendChild(style);
 }
+
+// ── Exportar a window para asegurar disponibilidad global ──
+window.descargarPlantillaExcel = descargarPlantillaExcel;
+window.descargarPlantillaUsuarios = descargarPlantillaUsuarios;
+window.descargarPlantillaBuses = descargarPlantillaBuses;
+window.descargarPlantillaVehiculos = descargarPlantillaBuses;
+window.previewBulk = previewBulk;
+window.subirBulk = subirBulk;
+window.parsearArchivoExcel = parsearArchivoExcel;
+window.exportarExcel = exportarExcel;
+window.exportarPDF = exportarPDF;

@@ -852,14 +852,17 @@ body {
 .bulk-compact-layout { display: flex; flex-direction: column; gap: 12px; padding: 12px 16px 16px; background: var(--white); border: 1.5px solid var(--border); border-radius: var(--r12); box-shadow: var(--sh0); }
 .bc-template-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-lt); }
 .bc-label { font-weight: 600; }
-.btn-outline-green { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 13px; font-weight: 600; color: #059669; background: transparent; border: 1.5px solid #059669; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+.btn-outline-green { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; font-size: 13px; font-weight: 600; color: #059669; background: transparent; border: 1.5px solid #059669; border-radius: 6px; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
 .btn-outline-green:hover { background: #ecfdf5; }
-.bc-upload-row { display: flex; align-items: stretch; gap: 10px; }
-.bc-file-input { flex: 1; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: var(--r8); background: var(--white); color: var(--text-md); font-size: 13.5px; cursor: pointer; transition: border-color 0.2s; }
+.bc-upload-row { display: flex; align-items: stretch; gap: 10px; width: 100%; }
+.bc-file-input { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: var(--r8); background: var(--white); color: var(--text-md); font-size: 13.5px; cursor: pointer; transition: border-color 0.2s; overflow: hidden; }
+.bc-file-input span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .bc-file-input:hover { border-color: #059669; }
 .bc-file-input input[type="file"] { display: none; }
-.btn-solid-green { display: inline-flex; align-items: center; gap: 8px; padding: 0 16px; font-size: 14px; font-weight: 600; color: #fff; background: #059669; border: none; border-radius: var(--r8); cursor: pointer; transition: background 0.2s; }
+.btn-solid-green { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 16px; min-height: 42px; font-size: 14px; font-weight: 600; color: #fff; background: #059669; border: none; border-radius: var(--r8); cursor: pointer; transition: background 0.2s; flex-shrink: 0; white-space: nowrap; }
 .btn-solid-green:hover { background: #047857; }
+.btn-solid-green:disabled { opacity: 0.7; cursor: not-allowed; }
+
 
 /* ════════════════════════════════════════════════
    SECTION SEPARATOR

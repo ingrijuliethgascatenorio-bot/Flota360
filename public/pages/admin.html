@@ -257,7 +257,7 @@
               <span id="bc-filename-veh">Seleccionar archivo .xlsx</span>
               <input type="file" id="fi-bulk-veh" accept=".xlsx" onchange="document.getElementById('bc-filename-veh').innerText=this.files[0]?this.files[0].name:'Seleccionar archivo .xlsx';if(typeof previewBulk==='function')previewBulk(this,'vehiculos');"/>
             </label>
-            <button class="btn-solid-green" id="btn-bulk-veh" onclick="subirBulk('vehiculos')" style="display:none"><i class="fa-solid fa-cloud-arrow-up"></i> Subir</button>
+            <button class="btn-solid-green" id="btn-bulk-veh" onclick="subirBulk('vehiculos')"><i class="fa-solid fa-cloud-arrow-up"></i> Subir</button>
           </div>
           <div id="preview-bulk-veh"></div>
         </div>
@@ -362,7 +362,7 @@
                 <span id="bc-filename-usr">Seleccionar archivo .xlsx</span>
                 <input type="file" id="fi-bulk-usr" accept=".xlsx" onchange="document.getElementById('bc-filename-usr').innerText=this.files[0]?this.files[0].name:'Seleccionar archivo .xlsx';if(typeof previewBulk==='function')previewBulk(this,'usuarios');"/>
               </label>
-              <button class="btn-solid-green" id="btn-bulk-usr" onclick="subirBulk('usuarios')" style="display:none"><i class="fa-solid fa-cloud-arrow-up"></i> Subir usuarios</button>
+              <button class="btn-solid-green" id="btn-bulk-usr" onclick="subirBulk('usuarios')"><i class="fa-solid fa-cloud-arrow-up"></i> Subir usuarios</button>
             </div>
             <div id="preview-bulk-usr"></div>
           </div>
