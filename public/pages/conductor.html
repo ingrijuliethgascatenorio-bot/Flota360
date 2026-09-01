@@ -488,10 +488,41 @@
   <!-- ██  MANTENIMIENTOS  ██ -->
   <section id="page-mantenimientos" class="page">
     <div class="c-section-card">
-      <div class="c-section-hdr">
+      <div class="c-section-hdr" style="margin-bottom:12px">
         <div>
           <h2 class="c-section-title">📄 Mantenimientos</h2>
           <p class="c-section-sub">Historial de órdenes de trabajo cerradas de tus vehículos asociados</p>
+        </div>
+      </div>
+
+      <!-- Resumen Estadístico Rápido -->
+      <div class="mant-stats-bar" id="mant-stats-bar">
+        <div class="mant-stat-box total">
+          <div class="mant-sb-icon">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <div>
+            <div class="mant-sb-num" id="cnt-mant-total">0</div>
+            <div class="mant-sb-lbl">Total Mantenimientos</div>
+          </div>
+        </div>
+        <div class="mant-stat-box prev">
+          <div class="mant-sb-icon">
+            <svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <div>
+            <div class="mant-sb-num" id="cnt-mant-prev">0</div>
+            <div class="mant-sb-lbl">Preventivos</div>
+          </div>
+        </div>
+        <div class="mant-stat-box corr">
+          <div class="mant-sb-icon">
+            <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <div>
+            <div class="mant-sb-num" id="cnt-mant-corr">0</div>
+            <div class="mant-sb-lbl">Correctivos</div>
+          </div>
         </div>
       </div>
 

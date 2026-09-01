@@ -2356,12 +2356,81 @@ body {
 /* ═══════════════════════════════════════════════════
    MANTENIMIENTOS & MODAL STYLES (Conductor Portal)
 ═══════════════════════════════════════════════════ */
+
+/* Barra de Estadísticas KPI */
+.mant-stats-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.mant-stat-box {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r12);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: var(--sh0);
+  transition: transform .15s, border-color .15s;
+}
+
+.mant-stat-box:hover {
+  transform: translateY(-2px);
+}
+
+.mant-stat-box.total { border-left: 4px solid var(--navy); }
+.mant-stat-box.prev { border-left: 4px solid var(--blue); }
+.mant-stat-box.corr { border-left: 4px solid var(--yellow); }
+
+.mant-sb-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mant-stat-box.total .mant-sb-icon { background: #f0f4f8; color: var(--navy); }
+.mant-stat-box.prev .mant-sb-icon { background: #e8f4ff; color: var(--blue); }
+.mant-stat-box.corr .mant-sb-icon { background: #fef3c7; color: #b45309; }
+
+.mant-sb-icon svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+}
+
+.mant-sb-num {
+  font-family: var(--font2);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.1;
+}
+
+.mant-sb-lbl {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-lt);
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  margin-top: 2px;
+}
+
+/* Filtros */
 .mantenimientos-filtros {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
   align-items: flex-end;
-  padding: 16px;
+  padding: 14px 16px;
   background: var(--slate-100);
   border-radius: var(--r12);
   margin-top: 14px;
@@ -2373,6 +2442,7 @@ body {
   gap: 16px;
 }
 
+/* Tarjeta de Mantenimiento Rediseñada */
 .mant-card {
   background: var(--white);
   border: 1.5px solid var(--border);
@@ -2380,9 +2450,10 @@ body {
   padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   box-shadow: var(--sh0);
   transition: transform .2s, box-shadow .2s, border-color .2s;
+  position: relative;
 }
 
 .mant-card:hover {
@@ -2391,74 +2462,150 @@ body {
   border-color: #93c5fd;
 }
 
-.mant-card-hdr {
+.mant-card-top {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--border);
 }
 
-.mant-placa {
+.mant-ot-num {
   font-family: var(--font2);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--navy);
-  letter-spacing: .5px;
+  letter-spacing: .3px;
 }
 
-.mant-veh-sub {
-  font-size: 12px;
-  color: var(--text-md);
+.mant-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: var(--r99);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+
+.mant-status-pill.closed {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+
+.mant-dot-closed {
+  width: 6px;
+  height: 6px;
+  background: #16a34a;
+  border-radius: 50%;
+}
+
+.mant-veh-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin-top: 2px;
+}
+
+.mant-placa-badge {
+  background: var(--navy);
+  color: #fff;
+  font-family: var(--font2);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--r6);
+  letter-spacing: .6px;
+}
+
+.mant-veh-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.mant-veh-anio {
+  font-weight: 400;
+  color: var(--text-lt);
+}
+
+.mant-tipo-line {
+  margin-top: 4px;
 }
 
 .mant-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: var(--r99);
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: var(--r6);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .mant-badge.preventivo {
   background: #eff6ff;
   color: #1d4ed8;
-  border: 1px solid #93c5fd;
+  border: 1px solid #bfdbfe;
 }
 
 .mant-badge.correctivo {
   background: #fef3c7;
   color: #92400e;
-  border: 1px solid #fbbf24;
+  border: 1px solid #fde68a;
 }
 
-.mant-card-body {
+.mant-card-info-grid {
   background: var(--slate-100);
   border-radius: var(--r8);
   padding: 10px 12px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
-  font-size: 12px;
+  margin-top: 2px;
 }
 
-.mant-stat-lbl {
+.mant-grid-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.mant-grid-cell.full-w {
+  grid-column: 1 / -1;
+  border-top: 1px solid rgba(0,0,0,0.06);
+  padding-top: 6px;
+  margin-top: 2px;
+}
+
+.mg-lbl {
+  font-size: 10px;
+  font-weight: 600;
   color: var(--text-lt);
-  font-size: 10.5px;
-  font-weight: 600;
   text-transform: uppercase;
-  margin-bottom: 2px;
+  letter-spacing: .2px;
 }
 
-.mant-stat-val {
-  color: var(--navy);
-  font-weight: 600;
-}
-
-.mant-desc-preview {
+.mg-val {
   font-size: 12px;
+  font-weight: 600;
+  color: var(--navy);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mg-val.cost {
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mant-trabajo-preview {
+  font-size: 11.5px;
   color: var(--text-md);
   line-height: 1.4;
   overflow: hidden;
@@ -2468,7 +2615,7 @@ body {
   -webkit-box-orient: vertical;
 }
 
-.mant-card-footer {
+.mant-card-actions {
   display: flex;
   gap: 8px;
   margin-top: auto;
@@ -2476,21 +2623,21 @@ body {
   border-top: 1px solid var(--border);
 }
 
-.mant-card-footer .btn-sm {
+.mant-card-actions .btn-sm {
   flex: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 5px;
-  padding: 8px 10px;
-  font-size: 12px;
+  padding: 7px 10px;
+  font-size: 11.5px;
   font-weight: 600;
   border-radius: var(--r8);
   cursor: pointer;
   transition: all .15s;
 }
 
-/* ── MODAL ENGINE ───────────────────────────────── */
+/* ── MODAL ENGINE & SECCIONES ───────────────────── */
 .modal-overlay {
   position: fixed; inset: 0;
   background: rgba(2, 13, 31, 0.55);
@@ -2621,9 +2768,10 @@ body {
 }
 .galeria-item img {
   width: 100%;
-  height: 100px;
+  height: 105px;
   object-fit: cover;
   transition: transform .2s;
+  cursor: pointer;
 }
 .galeria-item img:hover { transform: scale(1.04); }
 .galeria-meta {
@@ -2633,4 +2781,29 @@ body {
   color: var(--navy);
   background: #fff;
   border-top: 1px solid var(--border);
+}
+
+/* Caja de recomendaciones en modal */
+.rec-box {
+  background: #f0f7ff;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--r12);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rec-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--navy);
+  line-height: 1.4;
+}
+.rec-check {
+  color: var(--blue);
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
 }

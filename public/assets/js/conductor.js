@@ -1102,6 +1102,7 @@ async function cargarMantenimientosCond() {
   try {
     const res = await api('GET', '/conductores/mis-mantenimientos');
     _misMantenimientosCache = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+    _actualizarKpisMantenimientos();
     filtrarMantenimientosCond();
   } catch (err) {
     console.error('Error cargando mantenimientos:', err);
@@ -1111,6 +1112,26 @@ async function cargarMantenimientosCond() {
   }
 }
 
+function _actualizarKpisMantenimientos() {
+  const total = _misMantenimientosCache.length;
+  const prev = _misMantenimientosCache.filter(o => {
+    const tipo = (o.tipoMantenimiento || (o.plan ? 'Preventivo' : 'Correctivo')).toLowerCase();
+    return tipo.includes('prev');
+  }).length;
+  const corr = _misMantenimientosCache.filter(o => {
+    const tipo = (o.tipoMantenimiento || (o.plan ? 'Preventivo' : 'Correctivo')).toLowerCase();
+    return tipo.includes('corr');
+  }).length;
+
+  const elTotal = document.getElementById('cnt-mant-total');
+  const elPrev = document.getElementById('cnt-mant-prev');
+  const elCorr = document.getElementById('cnt-mant-corr');
+
+  if (elTotal) elTotal.textContent = total;
+  if (elPrev) elPrev.textContent = prev;
+  if (elCorr) elCorr.textContent = corr;
+}
+
 function filtrarMantenimientosCond() {
   const q = (document.getElementById('search-mant-cond')?.value ?? '').toLowerCase().trim();
   const tipo = document.getElementById('tipo-mant-cond')?.value ?? '';
@@ -1118,7 +1139,8 @@ function filtrarMantenimientosCond() {
   _mantFiltrados = _misMantenimientosCache.filter(o => {
     const v = o.vehiculo || {};
     const t = o.tecnico || {};
-    const matchTipo = !tipo || (o.tipoMantenimiento || '').toLowerCase() === tipo.toLowerCase();
+    const tipoReal = o.tipoMantenimiento || (o.plan ? 'Preventivo' : 'Correctivo');
+    const matchTipo = !tipo || tipoReal.toLowerCase() === tipo.toLowerCase();
     const matchQ = !q ||
       (v.placa || '').toLowerCase().includes(q) ||
       (v.marca || '').toLowerCase().includes(q) ||
@@ -1142,12 +1164,12 @@ function renderMantenimientosCond() {
   const total = _mantFiltrados.length;
   if (!total) {
     cont.innerHTML = `
-      <div style="text-align:center; padding:48px 20px; color:#888; font-size:14px; grid-column:1/-1;">
-        <div style="font-size:48px; margin-bottom:12px; color:var(--slate-300)">
-          <svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <div style="text-align:center; padding:40px 20px; color:#888; font-size:13.5px; grid-column:1/-1;">
+        <div style="font-size:42px; margin-bottom:10px; color:var(--slate-300)">
+          <svg viewBox="0 0 24 24" width="42" height="42" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
         </div>
-        <div style="font-weight:700; color:var(--navy); font-size:16px; margin-bottom:4px;">No tienes mantenimientos registrados</div>
-        Los reportes aparecerán cuando el taller cierre las órdenes de trabajo de tus vehículos asociados.
+        <div style="font-weight:700; color:var(--navy); font-size:15px; margin-bottom:4px;">No se encontraron mantenimientos</div>
+        Intenta cambiando el filtro de búsqueda o consulta más tarde.
       </div>`;
     if (pag) pag.innerHTML = '';
     return;
@@ -1163,42 +1185,45 @@ function renderMantenimientosCond() {
     const v = o.vehiculo || {};
     const t = o.tecnico || {};
     const tipo = o.tipoMantenimiento || (o.plan ? 'Preventivo' : 'Correctivo');
-    const badgeClass = tipo.toLowerCase() === 'preventivo' ? 'preventivo' : 'correctivo';
+    const badgeClass = tipo.toLowerCase().includes('prev') ? 'preventivo' : 'correctivo';
     const fechaCierre = o.fechaCierre ? fmtFecha(o.fechaCierre) : (o.fechaApertura ? fmtFecha(o.fechaApertura) : '—');
     const costoTotal = Number(o.costoTotal || 0);
 
     return `
       <div class="mant-card">
-        <div class="mant-card-hdr">
-          <div>
-            <div class="mant-placa">${v.placa || 'Sin placa'}</div>
-            <div class="mant-veh-sub">${v.marca || ''} ${v.modelo || ''} · ${v.anio || '—'}</div>
-          </div>
-          <span class="mant-badge ${badgeClass}">${tipo}</span>
+        <div class="mant-card-top">
+          <div class="mant-ot-num">OT #${o.id}</div>
+          <span class="mant-status-pill closed"><span class="mant-dot-closed"></span>CERRADA</span>
         </div>
 
-        <div class="mant-card-body">
-          <div>
-            <div class="mant-stat-lbl">Orden de Trabajo</div>
-            <div class="mant-stat-val">OT #${o.id}</div>
+        <div class="mant-card-main">
+          <div class="mant-veh-header">
+            <div class="mant-placa-badge">${v.placa || 'N/D'}</div>
+            <div class="mant-veh-name">${v.marca || ''} ${v.modelo || ''} <span class="mant-veh-anio">${v.anio ? `• ${v.anio}` : ''}</span></div>
           </div>
-          <div>
-            <div class="mant-stat-lbl">Fecha finalizada</div>
-            <div class="mant-stat-val">${fechaCierre}</div>
-          </div>
-          <div>
-            <div class="mant-stat-lbl">Técnico</div>
-            <div class="mant-stat-val" style="font-size:11.5px">${t.nombre || 'No asignado'}</div>
-          </div>
-          <div>
-            <div class="mant-stat-lbl">Costo total</div>
-            <div class="mant-stat-val" style="color:var(--blue);font-weight:700">$${fmt(costoTotal)}</div>
+          <div class="mant-tipo-line">
+            <span class="mant-badge ${badgeClass}">${tipo === 'Preventivo' ? '🛡️ Mantenimiento Preventivo' : '🔧 Mantenimiento Correctivo'}</span>
           </div>
         </div>
 
-        ${o.descripcion ? `<div class="mant-desc-preview" title="${o.descripcion}"><strong>Trabajo:</strong> ${o.descripcion}</div>` : ''}
+        <div class="mant-card-info-grid">
+          <div class="mant-grid-cell">
+            <span class="mg-lbl">Fecha de cierre</span>
+            <span class="mg-val">${fechaCierre}</span>
+          </div>
+          <div class="mant-grid-cell">
+            <span class="mg-lbl">Técnico responsable</span>
+            <span class="mg-val" title="${t.nombre || 'No asignado'}">${t.nombre || 'No asignado'}</span>
+          </div>
+          <div class="mant-grid-cell full-w">
+            <span class="mg-lbl">Costo total</span>
+            <span class="mg-val cost">$${fmt(costoTotal)}</span>
+          </div>
+        </div>
 
-        <div class="mant-card-footer">
+        ${o.descripcion ? `<div class="mant-trabajo-preview" title="${o.descripcion}"><strong>Trabajo:</strong> ${o.descripcion}</div>` : ''}
+
+        <div class="mant-card-actions">
           <button class="btn-outline btn-sm" onclick="abrirDetalleMantenimientoCond(${o.id})">
             <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             Ver detalle
@@ -1257,9 +1282,9 @@ async function abrirDetalleMantenimientoCond(id) {
 
     let html = `
       <div class="detalle-section">
-        <h4>Datos del Vehículo</h4>
+        <h4><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Datos del Vehículo</h4>
         <div class="detalle-grid">
-          <div class="dg-item"><span class="dg-label">Placa</span><span class="dg-val">${v.placa || '—'}</span></div>
+          <div class="dg-item"><span class="dg-label">Placa</span><span class="dg-val" style="color:var(--blue);font-weight:700">${v.placa || '—'}</span></div>
           <div class="dg-item"><span class="dg-label">Vehículo</span><span class="dg-val">${v.marca || ''} ${v.modelo || ''} (${v.anio || '—'})</span></div>
           <div class="dg-item"><span class="dg-label">N° Motor</span><span class="dg-val">${v.numMotor || 'No registrado'}</span></div>
           <div class="dg-item"><span class="dg-label">N° Chasis</span><span class="dg-val">${v.numChasis || 'No registrado'}</span></div>
@@ -1268,13 +1293,13 @@ async function abrirDetalleMantenimientoCond(id) {
       </div>
 
       <div class="detalle-section">
-        <h4>Información de la Orden</h4>
+        <h4><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg> Información de la Orden</h4>
         <div class="detalle-grid">
           <div class="dg-item"><span class="dg-label">Número OT</span><span class="dg-val">#${o.id}</span></div>
           <div class="dg-item"><span class="dg-label">Tipo</span><span class="dg-val">${tipo}</span></div>
           <div class="dg-item"><span class="dg-label">Apertura</span><span class="dg-val">${fmtFecha(o.fechaApertura)}</span></div>
           <div class="dg-item"><span class="dg-label">Cierre</span><span class="dg-val">${o.fechaCierre ? fmtFecha(o.fechaCierre) : '—'}</span></div>
-          <div class="dg-item"><span class="dg-label">Técnico</span><span class="dg-val">${t.nombre || 'No asignado'}</span></div>
+          <div class="dg-item"><span class="dg-label">Técnico Resp.</span><span class="dg-val">${t.nombre || 'No asignado'}</span></div>
           <div class="dg-item"><span class="dg-label">Estado</span><span class="dg-val" style="color:var(--green);font-weight:700">${o.estado || 'Cerrada'}</span></div>
         </div>
       </div>`;
@@ -1282,7 +1307,7 @@ async function abrirDetalleMantenimientoCond(id) {
     if (nov) {
       html += `
         <div class="detalle-section">
-          <h4>Novedad Reportada (Origen)</h4>
+          <h4><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Novedad Reportada (Origen)</h4>
           <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:var(--r12);padding:12px 14px;color:#92400e;font-size:12.5px">
             <div style="font-weight:700;margin-bottom:4px">${nov.tipoNovedad || 'Novedad'} · Reportada el ${fmtFecha(nov.fechaReporte)}</div>
             <div>${nov.descripcion || 'Sin descripción'}</div>
@@ -1292,8 +1317,8 @@ async function abrirDetalleMantenimientoCond(id) {
 
     html += `
       <div class="detalle-section">
-        <h4>Descripción / Trabajo Realizado</h4>
-        <div style="background:var(--slate-100);border-radius:var(--r8);padding:12px 14px;font-size:13px;color:var(--text);line-height:1.5">
+        <h4><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg> Trabajo Realizado</h4>
+        <div style="background:var(--slate-100);border-radius:var(--r8);padding:12px 14px;font-size:13px;color:var(--navy);line-height:1.5">
           ${o.descripcion || 'No registrado'}
         </div>
       </div>`;
@@ -1302,7 +1327,7 @@ async function abrirDetalleMantenimientoCond(id) {
       const totalRep = o.repuestos.reduce((acc, r) => acc + (Number(r.subtotal) || (Number(r.cantidad) * Number(r.precioUnitario)) || 0), 0);
       html += `
         <div class="detalle-section">
-          <h4>Repuestos y Materiales (${o.repuestos.length})</h4>
+          <h4><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg> Repuestos y Materiales (${o.repuestos.length})</h4>
           <table class="data-table">
             <thead>
               <tr>
@@ -1337,12 +1362,32 @@ async function abrirDetalleMantenimientoCond(id) {
 
     html += `
       <div class="detalle-section">
-        <h4>Resumen de Costos</h4>
+        <h4><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg> Resumen de Costos</h4>
         <div class="detalle-grid">
           <div class="dg-item"><span class="dg-label">Mano de obra</span><span class="dg-val">$${fmt(manoObra)}</span></div>
-          <div class="dg-item"><span class="dg-label">Total orden</span><span class="dg-val" style="color:var(--blue);font-size:15px">$${fmt(totalOrden)}</span></div>
+          <div class="dg-item"><span class="dg-label">Total orden</span><span class="dg-val" style="color:var(--blue);font-size:15px;font-weight:700">$${fmt(totalOrden)}</span></div>
         </div>
       </div>`;
+
+    // Recomendaciones de seguimiento
+    const recomendaciones = typeof window.generarRecomendacionesSeguimiento === 'function'
+      ? window.generarRecomendacionesSeguimiento(o)
+      : [];
+
+    if (recomendaciones.length > 0) {
+      html += `
+        <div class="detalle-section">
+          <h4><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Recomendaciones de Seguimiento Técnico</h4>
+          <div class="rec-box">
+            ${recomendaciones.map(rec => `
+              <div class="rec-item">
+                <span class="rec-check">✓</span>
+                <span>${rec}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>`;
+    }
 
     const fotosAntes = o.fotos?.antes || [];
     const fotosDespues = o.fotos?.despues || [];
@@ -1350,17 +1395,20 @@ async function abrirDetalleMantenimientoCond(id) {
     if (fotosAntes.length || fotosDespues.length) {
       html += `
         <div class="detalle-section">
-          <h4>Evidencias Fotográficas</h4>`;
+          <h4><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg> Evidencias Fotográficas</h4>`;
 
       if (fotosAntes.length) {
         html += `
           <div style="font-size:11px;font-weight:700;color:var(--text-lt);margin:8px 0 4px">ANTES DE LA REPARACIÓN</div>
           <div class="galeria-grid">
-            ${fotosAntes.map(f => `
-              <div class="galeria-item">
-                <img src="${apiAssetUrl(f.url)}" alt="Evidencia antes" onerror="this.parentElement.style.display='none'"/>
+            ${fotosAntes.map(f => {
+              const url = apiAssetUrl(f.url);
+              return `
+              <div class="galeria-item" onclick="window.open('${url}','_blank')">
+                <img src="${url}" alt="Evidencia antes" loading="lazy" onerror="this.parentElement.style.display='none'"/>
                 <div class="galeria-meta">🔵 ANTES · ${fmtFecha(f.tomadaEn)}</div>
-              </div>`).join('')}
+              </div>`;
+            }).join('')}
           </div>`;
       }
 
@@ -1368,11 +1416,14 @@ async function abrirDetalleMantenimientoCond(id) {
         html += `
           <div style="font-size:11px;font-weight:700;color:var(--text-lt);margin:12px 0 4px">DESPUÉS DE LA REPARACIÓN</div>
           <div class="galeria-grid">
-            ${fotosDespues.map(f => `
-              <div class="galeria-item">
-                <img src="${apiAssetUrl(f.url)}" alt="Evidencia después" onerror="this.parentElement.style.display='none'"/>
+            ${fotosDespues.map(f => {
+              const url = apiAssetUrl(f.url);
+              return `
+              <div class="galeria-item" onclick="window.open('${url}','_blank')">
+                <img src="${url}" alt="Evidencia después" loading="lazy" onerror="this.parentElement.style.display='none'"/>
                 <div class="galeria-meta">🟢 DESPUÉS · ${fmtFecha(f.tomadaEn)}</div>
-              </div>`).join('')}
+              </div>`;
+            }).join('')}
           </div>`;
       }
 

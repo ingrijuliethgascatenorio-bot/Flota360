@@ -36,11 +36,71 @@ function asegurarJsPDF(timeoutMs = 5000) {
 }
 
 /**
- * Convierte una URL de imagen a DataURL (Base64) de forma segura.
- * Si falla la descarga o CORS, retorna null sin romper el PDF.
+ * Generador determinístico de recomendaciones de seguimiento basado en los datos reales de la OT.
+ * No inventa diagnósticos; genera pautas técnicas de inspección según tipo de trabajo y repuestos.
+ * @param {Object} orden
+ * @returns {string[]} Lista de 3 a 5 recomendaciones técnicas
  */
-function cargarImagenBase64(url, timeoutMs = 4000) {
-  return new Promise((resolve) => {
+function generarRecomendacionesSeguimiento(orden) {
+  if (!orden) return [];
+  const tipo = (orden.tipoMantenimiento || (orden.plan ? 'Preventivo' : 'Correctivo')).toLowerCase();
+  const desc = (orden.descripcion || '').toLowerCase();
+  const repText = (orden.repuestos || []).map(r => (r.nombreRepuesto || '').toLowerCase()).join(' ');
+  const corpus = `${desc} ${repText}`;
+
+  const recs = [];
+
+  // 1. Recomendaciones base según tipo
+  if (tipo.includes('prev')) {
+    recs.push('Continuar con el cronograma de mantenimiento preventivo establecido para este vehículo.');
+    recs.push('Realizar seguimiento al próximo intervalo de kilometraje y fecha estimada de servicio.');
+  } else {
+    recs.push('Realizar seguimiento al comportamiento del vehículo durante las primeras jornadas de operación posterior a la intervención.');
+    recs.push('Reportar oportunamente al taller o mediante el módulo de novedades cualquier anomalía relacionada con el trabajo realizado.');
+  }
+
+  // 2. Recomendaciones por palabras clave (repuestos / descripción)
+  if (corpus.includes('aceite') || corpus.includes('lubric') || corpus.includes('filtro')) {
+    recs.push('Verificar periódicamente el nivel de aceite de motor y estado de filtros según especificaciones del fabricante.');
+  }
+
+  if (corpus.includes('freno') || corpus.includes('pastilla') || corpus.includes('disco') || corpus.includes('balata') || corpus.includes('líquido')) {
+    recs.push('Verificar la firmeza del pedal de freno y comprobar el nivel de líquido de frenos antes de iniciar cada turno.');
+  }
+
+  if (corpus.includes('llanta') || corpus.includes('neumat') || corpus.includes('neumát') || corpus.includes('alineac') || corpus.includes('balance')) {
+    recs.push('Inspeccionar semanalmente la presión de inflado en frío y el desgaste uniforme de la banda de rodadura de las llantas.');
+  }
+
+  if (corpus.includes('bater') || corpus.includes('baterí') || corpus.includes('electr') || corpus.includes('alternad') || corpus.includes('arranque')) {
+    recs.push('Comprobar periódicamente la carga de la batería, ajuste de bornes y funcionamiento del sistema eléctrico.');
+  }
+
+  if (corpus.includes('refrig') || corpus.includes('radiad') || corpus.includes('temperat') || corpus.includes('termostat') || corpus.includes('manguera')) {
+    recs.push('Monitorear el indicador de temperatura y verificar el nivel de refrigerante en el depósito auxiliar.');
+  }
+
+  if (corpus.includes('suspens') || corpus.includes('amortiguad') || corpus.includes('direcc') || corpus.includes('rotula') || corpus.includes('rótula')) {
+    recs.push('Prestar atención a ruidos o vibraciones en la dirección y suspensión al transitar por superficies irregulares.');
+  }
+
+  // 3. Complemento general si la lista es corta
+  if (recs.length < 3) {
+    recs.push('Realizar la inspección preoperacional diaria de niveles, luces y documentos legales (SOAT/RTM) antes de iniciar turno.');
+  }
+
+  // Limitar a máximo 4 o 5 recomendaciones precisas
+  return recs.slice(0, 4);
+}
+window.generarRecomendacionesSeguimiento = generarRecomendacionesSeguimiento;
+
+/**
+ * Convierte una URL de imagen a DataURL (Base64) de forma segura y robusta.
+ * Intenta primero mediante fetch (directo binario) y con fallback a HTML Image/Canvas.
+ * Retorna dimensiones naturales y DataURL. Si falla la descarga, retorna null sin romper el PDF.
+ */
+function cargarImagenBase64(url, timeoutMs = 5000) {
+  return new Promise(async (resolve) => {
     if (!url) return resolve(null);
     let finalUrl = url;
     if (typeof apiAssetUrl === 'function') {
@@ -49,19 +109,62 @@ function cargarImagenBase64(url, timeoutMs = 4000) {
       finalUrl = `/${url.replace(/^\/+/, '')}`;
     }
 
-    const img = new Image();
-    img.crossOrigin = 'Anonymous';
-
     const timer = setTimeout(() => {
       resolve(null);
     }, timeoutMs);
+
+    // ESTRATEGIA 1: Fetch directo con Blob
+    try {
+      const response = await fetch(finalUrl, { mode: 'cors', credentials: 'omit' });
+      if (response.ok) {
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const dataUrl = reader.result;
+          if (dataUrl && typeof dataUrl === 'string') {
+            const tempImg = new Image();
+            tempImg.onload = () => {
+              clearTimeout(timer);
+              let format = 'JPEG';
+              if (blob.type.includes('png')) format = 'PNG';
+              else if (blob.type.includes('webp')) format = 'WEBP';
+              resolve({
+                dataUrl,
+                width: tempImg.naturalWidth || 800,
+                height: tempImg.naturalHeight || 600,
+                format,
+              });
+            };
+            tempImg.onerror = () => {
+              clearTimeout(timer);
+              resolve({
+                dataUrl,
+                width: 800,
+                height: 600,
+                format: 'JPEG',
+              });
+            };
+            tempImg.src = dataUrl;
+            return;
+          }
+        };
+        reader.readAsDataURL(blob);
+        return;
+      }
+    } catch (e) {
+      // Continuar al fallback de Canvas
+    }
+
+    // ESTRATEGIA 2: Fallback Image + Canvas
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
 
     img.onload = () => {
       clearTimeout(timer);
       try {
         const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth || img.width;
-        canvas.height = img.naturalHeight || img.height;
+        canvas.width = img.naturalWidth || img.width || 800;
+        canvas.height = img.naturalHeight || img.height || 600;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
@@ -69,9 +172,10 @@ function cargarImagenBase64(url, timeoutMs = 4000) {
           dataUrl,
           width: canvas.width,
           height: canvas.height,
+          format: 'JPEG',
         });
       } catch (err) {
-        console.warn('No se pudo convertir imagen a Base64:', err);
+        console.warn('Fallback canvas Base64 falló:', err);
         resolve(null);
       }
     };
@@ -148,10 +252,10 @@ window.generarReporteMantenimientoPDF = async function (orden) {
     let y = margin;
 
     // Colores corporativos
-    const cNavy = [11, 31, 69];     // #0b1f45
-    const cBlue = [26, 86, 219];    // #1a56db
-    const cDark = [30, 41, 59];     // #1e293b
-    const cMuted = [100, 116, 139]; // #64748b
+    const cNavy = [11, 31, 69];       // #0b1f45
+    const cBlue = [26, 86, 219];      // #1a56db
+    const cDark = [30, 41, 59];       // #1e293b
+    const cMuted = [100, 116, 139];   // #64748b
     const cBgLight = [248, 250, 252]; // #f8fafc
     const cBorder = [226, 232, 240];  // #e2e8f0
 
@@ -165,9 +269,9 @@ window.generarReporteMantenimientoPDF = async function (orden) {
     doc.text('FLOTACONTROL 360', margin + 6, y + 9);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
+    doc.setFontSize(8);
     doc.setTextColor(200, 220, 255);
-    doc.text('SISTEMA DE GESTIÓN Y CONTROL DE FLOTA', margin + 6, y + 15);
+    doc.text('SISTEMA INTEGRAL DE GESTIÓN Y MANTENIMIENTO DE FLOTA', margin + 6, y + 15);
 
     // Badge número de orden
     const otId = orden.id || 'N/D';
@@ -187,7 +291,7 @@ window.generarReporteMantenimientoPDF = async function (orden) {
     doc.setTextColor(...cNavy);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(13);
-    doc.text('REPORTE DE MANTENIMIENTO TÉCNICO', margin, y);
+    doc.text('REPORTE TÉCNICO DE MANTENIMIENTO', margin, y);
 
     const fechaGen = new Date().toLocaleDateString('es-CO', {
       day: '2-digit', month: '2-digit', year: 'numeric'
@@ -427,9 +531,50 @@ window.generarReporteMantenimientoPDF = async function (orden) {
     doc.setFontSize(9.5);
     doc.text(_fmtMoney(totalOrden), cardCostosX + cardCostosW - 4, y + 20, { align: 'right' });
 
-    y += 30;
+    y += 28;
 
-    // ── 7. EVIDENCIAS FOTOGRÁFICAS (ANTES Y DESPUÉS) ────────────────────────
+    // ── 7. RECOMENDACIONES DE SEGUIMIENTO TÉCNICO ───────────────────────────
+    const recomendaciones = generarRecomendacionesSeguimiento(orden);
+    if (recomendaciones.length > 0) {
+      const recItemHeight = 5.5;
+      const recBoxH = 10 + recomendaciones.length * recItemHeight;
+
+      if (y + recBoxH > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+      }
+
+      doc.setFillColor(240, 247, 255); // Azul suave
+      doc.setDrawColor(186, 215, 253);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(margin, y, contentWidth, recBoxH, 2, 2, 'FD');
+
+      doc.setFillColor(219, 234, 254);
+      doc.roundedRect(margin, y, contentWidth, 7, 2, 2, 'F');
+      doc.setTextColor(...cNavy);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.text('RECOMENDACIONES DE SEGUIMIENTO TÉCNICO', margin + 4, y + 5);
+
+      let ry = y + 11.5;
+      recomendaciones.forEach(rec => {
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(8);
+        doc.setTextColor(...cBlue);
+        doc.text('✓', margin + 4, ry);
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(7.5);
+        doc.setTextColor(...cDark);
+        const wrappedRec = doc.splitTextToSize(rec, contentWidth - 14);
+        doc.text(wrappedRec, margin + 10, ry);
+        ry += recItemHeight;
+      });
+
+      y += recBoxH + 6;
+    }
+
+    // ── 8. EVIDENCIAS FOTOGRÁFICAS (ANTES Y DESPUÉS) ────────────────────────
     const fotosAntes = Array.isArray(orden.fotos?.antes)
       ? orden.fotos.antes
       : (Array.isArray(orden.fotos) ? orden.fotos.filter((f) => f.tipoFoto === 'antes') : []);
@@ -455,10 +600,10 @@ window.generarReporteMantenimientoPDF = async function (orden) {
       y += 9;
 
       // Renderizar grupo de fotos
-      const _renderGrupoFotos = async (titulo, listaFotos, colorDot) => {
+      const _renderGrupoFotos = async (titulo, listaFotos, badgeColor) => {
         if (!listaFotos.length) return;
 
-        if (y + 45 > pageHeight - margin) {
+        if (y + 48 > pageHeight - margin) {
           doc.addPage();
           y = margin;
         }
@@ -470,42 +615,57 @@ window.generarReporteMantenimientoPDF = async function (orden) {
         y += 4;
 
         const maxPorFila = 3;
-        const imgW = (contentWidth - (maxPorFila - 1) * 4) / maxPorFila;
-        const imgH = 36;
+        const boxW = (contentWidth - (maxPorFila - 1) * 4) / maxPorFila; // ~58mm
+        const boxH = 40; // ~40mm
 
         for (let i = 0; i < listaFotos.length; i++) {
           const f = listaFotos[i];
           const colIdx = i % maxPorFila;
           if (colIdx === 0 && i > 0) {
-            y += imgH + 8;
-            if (y + imgH > pageHeight - margin) {
+            y += boxH + 8;
+            if (y + boxH > pageHeight - margin) {
               doc.addPage();
               y = margin;
             }
           }
 
-          const imgX = margin + colIdx * (imgW + 4);
+          const imgX = margin + colIdx * (boxW + 4);
 
-          // Marco de la imagen
+          // Marco exterior de la foto
           doc.setFillColor(245, 247, 250);
           doc.setDrawColor(...cBorder);
-          doc.rect(imgX, y, imgW, imgH, 'FD');
+          doc.rect(imgX, y, boxW, boxH, 'FD');
 
           try {
             const imgData = await cargarImagenBase64(f.url);
             if (imgData?.dataUrl) {
-              doc.addImage(imgData.dataUrl, 'JPEG', imgX + 1, y + 1, imgW - 2, imgH - 2, undefined, 'FAST');
+              // Calcular proporciones exactas para evitar distorsión
+              const aspect = (imgData.width || 4) / (imgData.height || 3);
+              const maxInnerW = boxW - 2;
+              const maxInnerH = boxH - 2;
+
+              let drawW = maxInnerW;
+              let drawH = drawW / aspect;
+              if (drawH > maxInnerH) {
+                drawH = maxInnerH;
+                drawW = drawH * aspect;
+              }
+
+              const drawX = imgX + 1 + (maxInnerW - drawW) / 2;
+              const drawY = y + 1 + (maxInnerH - drawH) / 2;
+
+              doc.addImage(imgData.dataUrl, imgData.format || 'JPEG', drawX, drawY, drawW, drawH, undefined, 'FAST');
             } else {
               doc.setFont('helvetica', 'italic');
               doc.setFontSize(7);
               doc.setTextColor(...cMuted);
-              doc.text('[Evidencia no disponible]', imgX + imgW / 2, y + imgH / 2, { align: 'center' });
+              doc.text('[Evidencia no disponible]', imgX + boxW / 2, y + boxH / 2, { align: 'center' });
             }
-          } catch {
+          } catch (e) {
             doc.setFont('helvetica', 'italic');
             doc.setFontSize(7);
             doc.setTextColor(...cMuted);
-            doc.text('[Evidencia no disponible]', imgX + imgW / 2, y + imgH / 2, { align: 'center' });
+            doc.text('[Evidencia no disponible]', imgX + boxW / 2, y + boxH / 2, { align: 'center' });
           }
 
           // Pie de foto con fecha
@@ -514,11 +674,11 @@ window.generarReporteMantenimientoPDF = async function (orden) {
             doc.setFont('helvetica', 'normal');
             doc.setFontSize(6.5);
             doc.setTextColor(...cMuted);
-            doc.text(fechaFoto, imgX + imgW / 2, y + imgH + 3.2, { align: 'center' });
+            doc.text(fechaFoto, imgX + boxW / 2, y + boxH + 3.2, { align: 'center' });
           }
         }
 
-        y += imgH + 8;
+        y += boxH + 8;
       };
 
       if (fotosAntes.length > 0) {
@@ -529,7 +689,7 @@ window.generarReporteMantenimientoPDF = async function (orden) {
       }
     }
 
-    // ── 8. PIE DE PÁGINA Y NUMERACIÓN EN TODAS LAS PÁGINAS ──────────────────
+    // ── 9. PIE DE PÁGINA Y NUMERACIÓN EN TODAS LAS PÁGINAS ──────────────────
     const totalPages = doc.internal.getNumberOfPages();
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
@@ -545,7 +705,7 @@ window.generarReporteMantenimientoPDF = async function (orden) {
       doc.text(`Página ${p} de ${totalPages}`, pageWidth - margin, pageHeight - 6.5, { align: 'right' });
     }
 
-    // ── 9. GUARDAR ARCHIVO ──────────────────────────────────────────────────
+    // ── 10. GUARDAR ARCHIVO ─────────────────────────────────────────────────
     const fileName = `Reporte_Mantenimiento_OT_${otId}.pdf`;
     doc.save(fileName);
 
