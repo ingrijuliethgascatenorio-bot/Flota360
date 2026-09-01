@@ -3,10 +3,19 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { join } from 'path';
+import * as fs from 'fs';
 import { Request, Response } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Asegurar directorios de almacenamiento en el sistema de archivos
+  const uploadsPath = join(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadsPath)) fs.mkdirSync(uploadsPath, { recursive: true });
+  const ordenesPath = join(uploadsPath, 'ordenes');
+  if (!fs.existsSync(ordenesPath)) fs.mkdirSync(ordenesPath, { recursive: true });
+  const tempPath = join(uploadsPath, 'temp');
+  if (!fs.existsSync(tempPath)) fs.mkdirSync(tempPath, { recursive: true });
 
   app.useGlobalPipes(
     new ValidationPipe({
