@@ -1,16 +1,22 @@
 import { Repository } from 'typeorm';
 import { OrdenTrabajo } from './orden-trabajo.entity';
 import { RepuestoOrden } from './repuesto-orden.entity';
+import { AsignacionConductor } from '../asignaciones/asignacion_conductor.entity';
+import { Novedad } from '../novedades/entities/novedad.entity';
 import { CreateOrdenDto, UpdateEstadoDto, UpdateCostosDto } from './dto/create-orden.dto';
 import { PlanesService } from '../planes/planes.service';
 import { RolUsuario } from '../usuarios/usuario.entity';
 export declare class OrdenesService {
     private readonly ordenRepo;
     private readonly repuestoRepo;
+    private readonly asigRepo;
+    private readonly novedadRepo;
     private readonly planesService;
-    constructor(ordenRepo: Repository<OrdenTrabajo>, repuestoRepo: Repository<RepuestoOrden>, planesService: PlanesService);
+    constructor(ordenRepo: Repository<OrdenTrabajo>, repuestoRepo: Repository<RepuestoOrden>, asigRepo: Repository<AsignacionConductor>, novedadRepo: Repository<Novedad>, planesService: PlanesService);
     crear(dto: CreateOrdenDto): Promise<any>;
     buscarPorId(id: number): Promise<OrdenTrabajo>;
+    listarPorConductor(conductorId: number): Promise<any[]>;
+    buscarPorConductor(conductorId: number, id: number): Promise<any>;
     listar(vehiculoId?: number): Promise<OrdenTrabajo[]>;
     cambiarEstado(id: number, dto: UpdateEstadoDto, rolUsuario: RolUsuario): Promise<OrdenTrabajo>;
     actualizarCostos(id: number, dto: UpdateCostosDto): Promise<OrdenTrabajo>;

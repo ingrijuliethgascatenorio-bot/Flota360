@@ -35,6 +35,7 @@ function showPage(id, title) {
   if (id === 'vehiculos') cargarVehiculos();
   if (id === 'alertas') cargarAlertasFull();
   if (id === 'novedades') setTimeout(initNovedadesPage, 100);
+  if (id === 'mantenimientos') cargarMantenimientosCond();
 }
 
 // ══════════════════════════════════════════════════
@@ -1081,4 +1082,342 @@ function _buildTurnoCard(t) {
       </div>
       ${completo ? `<div class="hist-card-footer">${checkIco} Registrado correctamente</div>` : ''}
     </div>`;
+}
+
+// ══════════════════════════════════════════════════
+//  MANTENIMIENTOS (Conductor)
+// ══════════════════════════════════════════════════
+let _misMantenimientosCache = [];
+let _mantFiltrados = [];
+let _mantPagActual = 1;
+const MANT_PER_PAGE = 8;
+let _mantOrdenActiva = null;
+
+async function cargarMantenimientosCond() {
+  const cont = document.getElementById('mant-list-container');
+  if (cont) {
+    cont.innerHTML = '<div class="td-loading">Cargando mantenimientos…</div>';
+  }
+
+  try {
+    const res = await api('GET', '/conductores/mis-mantenimientos');
+    _misMantenimientosCache = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+    filtrarMantenimientosCond();
+  } catch (err) {
+    console.error('Error cargando mantenimientos:', err);
+    if (cont) {
+      cont.innerHTML = `<div class="td-loading" style="color:var(--red)">No fue posible cargar tus mantenimientos. Intenta nuevamente.</div>`;
+    }
+  }
+}
+
+function filtrarMantenimientosCond() {
+  const q = (document.getElementById('search-mant-cond')?.value ?? '').toLowerCase().trim();
+  const tipo = document.getElementById('tipo-mant-cond')?.value ?? '';
+
+  _mantFiltrados = _misMantenimientosCache.filter(o => {
+    const v = o.vehiculo || {};
+    const t = o.tecnico || {};
+    const matchTipo = !tipo || (o.tipoMantenimiento || '').toLowerCase() === tipo.toLowerCase();
+    const matchQ = !q ||
+      (v.placa || '').toLowerCase().includes(q) ||
+      (v.marca || '').toLowerCase().includes(q) ||
+      (v.modelo || '').toLowerCase().includes(q) ||
+      (t.nombre || '').toLowerCase().includes(q) ||
+      (o.descripcion || '').toLowerCase().includes(q) ||
+      String(o.id).includes(q);
+
+    return matchTipo && matchQ;
+  });
+
+  _mantPagActual = 1;
+  renderMantenimientosCond();
+}
+
+function renderMantenimientosCond() {
+  const cont = document.getElementById('mant-list-container');
+  const pag = document.getElementById('c-mant-pagination');
+  if (!cont) return;
+
+  const total = _mantFiltrados.length;
+  if (!total) {
+    cont.innerHTML = `
+      <div style="text-align:center; padding:48px 20px; color:#888; font-size:14px; grid-column:1/-1;">
+        <div style="font-size:48px; margin-bottom:12px; color:var(--slate-300)">
+          <svg viewBox="0 0 24 24" width="48" height="48" stroke="currentColor" stroke-width="1.5" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <div style="font-weight:700; color:var(--navy); font-size:16px; margin-bottom:4px;">No tienes mantenimientos registrados</div>
+        Los reportes aparecerán cuando el taller cierre las órdenes de trabajo de tus vehículos asociados.
+      </div>`;
+    if (pag) pag.innerHTML = '';
+    return;
+  }
+
+  const pages = Math.max(1, Math.ceil(total / MANT_PER_PAGE));
+  _mantPagActual = Math.min(Math.max(1, _mantPagActual), pages);
+
+  const desde = (_mantPagActual - 1) * MANT_PER_PAGE;
+  const pagina = _mantFiltrados.slice(desde, desde + MANT_PER_PAGE);
+
+  cont.innerHTML = pagina.map(o => {
+    const v = o.vehiculo || {};
+    const t = o.tecnico || {};
+    const tipo = o.tipoMantenimiento || (o.plan ? 'Preventivo' : 'Correctivo');
+    const badgeClass = tipo.toLowerCase() === 'preventivo' ? 'preventivo' : 'correctivo';
+    const fechaCierre = o.fechaCierre ? fmtFecha(o.fechaCierre) : (o.fechaApertura ? fmtFecha(o.fechaApertura) : '—');
+    const costoTotal = Number(o.costoTotal || 0);
+
+    return `
+      <div class="mant-card">
+        <div class="mant-card-hdr">
+          <div>
+            <div class="mant-placa">${v.placa || 'Sin placa'}</div>
+            <div class="mant-veh-sub">${v.marca || ''} ${v.modelo || ''} · ${v.anio || '—'}</div>
+          </div>
+          <span class="mant-badge ${badgeClass}">${tipo}</span>
+        </div>
+
+        <div class="mant-card-body">
+          <div>
+            <div class="mant-stat-lbl">Orden de Trabajo</div>
+            <div class="mant-stat-val">OT #${o.id}</div>
+          </div>
+          <div>
+            <div class="mant-stat-lbl">Fecha finalizada</div>
+            <div class="mant-stat-val">${fechaCierre}</div>
+          </div>
+          <div>
+            <div class="mant-stat-lbl">Técnico</div>
+            <div class="mant-stat-val" style="font-size:11.5px">${t.nombre || 'No asignado'}</div>
+          </div>
+          <div>
+            <div class="mant-stat-lbl">Costo total</div>
+            <div class="mant-stat-val" style="color:var(--blue);font-weight:700">$${fmt(costoTotal)}</div>
+          </div>
+        </div>
+
+        ${o.descripcion ? `<div class="mant-desc-preview" title="${o.descripcion}"><strong>Trabajo:</strong> ${o.descripcion}</div>` : ''}
+
+        <div class="mant-card-footer">
+          <button class="btn-outline btn-sm" onclick="abrirDetalleMantenimientoCond(${o.id})">
+            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Ver detalle
+          </button>
+          <button class="btn-primary btn-sm" onclick="descargarPDFMantenimientoCond(${o.id}, this)">
+            <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+            Descargar PDF
+          </button>
+        </div>
+      </div>`;
+  }).join('');
+
+  _renderMantPagination(total, pages, _mantPagActual);
+}
+
+function _renderMantPagination(total, pages, current) {
+  const pag = document.getElementById('c-mant-pagination');
+  if (!pag) return;
+  if (pages <= 1) {
+    pag.innerHTML = '';
+    return;
+  }
+
+  let html = `
+    <button class="c-pag-btn" ${current === 1 ? 'disabled' : ''} onclick="_cambiarPagMant(${current - 1})">‹ Ant</button>
+    <span class="c-pag-info">Pág. ${current} de ${pages} (${total} reportes)</span>
+    <button class="c-pag-btn" ${current === pages ? 'disabled' : ''} onclick="_cambiarPagMant(${current + 1})">Sig ›</button>
+  `;
+  pag.innerHTML = html;
+}
+
+function _cambiarPagMant(nuevaPag) {
+  _mantPagActual = nuevaPag;
+  renderMantenimientosCond();
+  document.getElementById('page-mantenimientos')?.scrollIntoView({ behavior: 'smooth' });
+}
+
+async function abrirDetalleMantenimientoCond(id) {
+  document.getElementById('mdm-title').textContent = `Mantenimiento OT #${id}`;
+  document.getElementById('mdm-body').innerHTML = '<div class="td-loading">Cargando información del mantenimiento…</div>';
+  const footer = document.getElementById('mdm-footer');
+  if (footer) footer.style.display = 'none';
+
+  openModal('m-det-mantenimiento');
+
+  try {
+    const res = await api('GET', `/conductores/mis-mantenimientos/${id}`);
+    const o = res.data ?? res;
+    _mantOrdenActiva = o;
+
+    const v = o.vehiculo || {};
+    const t = o.tecnico || {};
+    const plan = o.plan || null;
+    const nov = o.novedad || null;
+    const tipo = o.tipoMantenimiento || (plan ? 'Preventivo' : 'Correctivo');
+
+    let html = `
+      <div class="detalle-section">
+        <h4>Datos del Vehículo</h4>
+        <div class="detalle-grid">
+          <div class="dg-item"><span class="dg-label">Placa</span><span class="dg-val">${v.placa || '—'}</span></div>
+          <div class="dg-item"><span class="dg-label">Vehículo</span><span class="dg-val">${v.marca || ''} ${v.modelo || ''} (${v.anio || '—'})</span></div>
+          <div class="dg-item"><span class="dg-label">N° Motor</span><span class="dg-val">${v.numMotor || 'No registrado'}</span></div>
+          <div class="dg-item"><span class="dg-label">N° Chasis</span><span class="dg-val">${v.numChasis || 'No registrado'}</span></div>
+          <div class="dg-item"><span class="dg-label">Km Actual</span><span class="dg-val">${v.kmActual !== undefined ? fmt(v.kmActual) + ' km' : 'No registrado'}</span></div>
+        </div>
+      </div>
+
+      <div class="detalle-section">
+        <h4>Información de la Orden</h4>
+        <div class="detalle-grid">
+          <div class="dg-item"><span class="dg-label">Número OT</span><span class="dg-val">#${o.id}</span></div>
+          <div class="dg-item"><span class="dg-label">Tipo</span><span class="dg-val">${tipo}</span></div>
+          <div class="dg-item"><span class="dg-label">Apertura</span><span class="dg-val">${fmtFecha(o.fechaApertura)}</span></div>
+          <div class="dg-item"><span class="dg-label">Cierre</span><span class="dg-val">${o.fechaCierre ? fmtFecha(o.fechaCierre) : '—'}</span></div>
+          <div class="dg-item"><span class="dg-label">Técnico</span><span class="dg-val">${t.nombre || 'No asignado'}</span></div>
+          <div class="dg-item"><span class="dg-label">Estado</span><span class="dg-val" style="color:var(--green);font-weight:700">${o.estado || 'Cerrada'}</span></div>
+        </div>
+      </div>`;
+
+    if (nov) {
+      html += `
+        <div class="detalle-section">
+          <h4>Novedad Reportada (Origen)</h4>
+          <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:var(--r12);padding:12px 14px;color:#92400e;font-size:12.5px">
+            <div style="font-weight:700;margin-bottom:4px">${nov.tipoNovedad || 'Novedad'} · Reportada el ${fmtFecha(nov.fechaReporte)}</div>
+            <div>${nov.descripcion || 'Sin descripción'}</div>
+          </div>
+        </div>`;
+    }
+
+    html += `
+      <div class="detalle-section">
+        <h4>Descripción / Trabajo Realizado</h4>
+        <div style="background:var(--slate-100);border-radius:var(--r8);padding:12px 14px;font-size:13px;color:var(--text);line-height:1.5">
+          ${o.descripcion || 'No registrado'}
+        </div>
+      </div>`;
+
+    if (o.repuestos?.length) {
+      const totalRep = o.repuestos.reduce((acc, r) => acc + (Number(r.subtotal) || (Number(r.cantidad) * Number(r.precioUnitario)) || 0), 0);
+      html += `
+        <div class="detalle-section">
+          <h4>Repuestos y Materiales (${o.repuestos.length})</h4>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Repuesto</th>
+                <th>Cant.</th>
+                <th>Precio Unit.</th>
+                <th>Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${o.repuestos.map(r => {
+                const sub = Number(r.subtotal) || (Number(r.cantidad) * Number(r.precioUnitario)) || 0;
+                return `
+                  <tr>
+                    <td>${r.nombreRepuesto}</td>
+                    <td>${r.cantidad}</td>
+                    <td>$${fmt(r.precioUnitario)}</td>
+                    <td>$${fmt(sub)}</td>
+                  </tr>`;
+              }).join('')}
+              <tr style="background:var(--slate-100);font-weight:700">
+                <td colspan="3" style="text-align:right;padding-right:12px">Total Repuestos:</td>
+                <td>$${fmt(totalRep)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>`;
+    }
+
+    const manoObra = Number(o.costoManoObra || 0);
+    const totalOrden = Number(o.costoTotal || 0);
+
+    html += `
+      <div class="detalle-section">
+        <h4>Resumen de Costos</h4>
+        <div class="detalle-grid">
+          <div class="dg-item"><span class="dg-label">Mano de obra</span><span class="dg-val">$${fmt(manoObra)}</span></div>
+          <div class="dg-item"><span class="dg-label">Total orden</span><span class="dg-val" style="color:var(--blue);font-size:15px">$${fmt(totalOrden)}</span></div>
+        </div>
+      </div>`;
+
+    const fotosAntes = o.fotos?.antes || [];
+    const fotosDespues = o.fotos?.despues || [];
+
+    if (fotosAntes.length || fotosDespues.length) {
+      html += `
+        <div class="detalle-section">
+          <h4>Evidencias Fotográficas</h4>`;
+
+      if (fotosAntes.length) {
+        html += `
+          <div style="font-size:11px;font-weight:700;color:var(--text-lt);margin:8px 0 4px">ANTES DE LA REPARACIÓN</div>
+          <div class="galeria-grid">
+            ${fotosAntes.map(f => `
+              <div class="galeria-item">
+                <img src="${apiAssetUrl(f.url)}" alt="Evidencia antes" onerror="this.parentElement.style.display='none'"/>
+                <div class="galeria-meta">🔵 ANTES · ${fmtFecha(f.tomadaEn)}</div>
+              </div>`).join('')}
+          </div>`;
+      }
+
+      if (fotosDespues.length) {
+        html += `
+          <div style="font-size:11px;font-weight:700;color:var(--text-lt);margin:12px 0 4px">DESPUÉS DE LA REPARACIÓN</div>
+          <div class="galeria-grid">
+            ${fotosDespues.map(f => `
+              <div class="galeria-item">
+                <img src="${apiAssetUrl(f.url)}" alt="Evidencia después" onerror="this.parentElement.style.display='none'"/>
+                <div class="galeria-meta">🟢 DESPUÉS · ${fmtFecha(f.tomadaEn)}</div>
+              </div>`).join('')}
+          </div>`;
+      }
+
+      html += `</div>`;
+    }
+
+    document.getElementById('mdm-body').innerHTML = html;
+
+    const btnPdf = document.getElementById('mdm-btn-pdf');
+    if (btnPdf) {
+      btnPdf.onclick = () => {
+        if (typeof window.generarReporteMantenimientoPDF === 'function') {
+          window.generarReporteMantenimientoPDF(_mantOrdenActiva);
+        }
+      };
+    }
+
+    if (footer) footer.style.display = 'flex';
+  } catch (err) {
+    document.getElementById('mdm-body').innerHTML =
+      `<div class="td-loading" style="color:var(--red)">Error: ${err.message}</div>`;
+  }
+}
+
+async function descargarPDFMantenimientoCond(id, btn) {
+  const originalText = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = 'Descargando…';
+  }
+
+  try {
+    const res = await api('GET', `/conductores/mis-mantenimientos/${id}`);
+    const orden = res.data ?? res;
+    if (typeof window.generarReporteMantenimientoPDF === 'function') {
+      await window.generarReporteMantenimientoPDF(orden);
+    } else {
+      toast('Motor de PDF cargando, intenta en un segundo', 'info');
+    }
+  } catch (err) {
+    toast(`Error al obtener mantenimiento #${id}: ${err.message}`, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  }
 }

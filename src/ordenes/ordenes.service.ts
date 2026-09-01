@@ -5,12 +5,13 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { OrdenTrabajo, EstadoOrden, TipoMantenimiento } from './orden-trabajo.entity';
 import { RepuestoOrden } from './repuesto-orden.entity';
 import { DocumentoLegal } from '../documentos/documento-legal.entity';
 import { AsignacionConductor } from '../asignaciones/asignacion_conductor.entity';
 import { PlanMantenimiento } from '../planes/plan-mantenimiento.entity';
+import { Novedad } from '../novedades/entities/novedad.entity';
 import { DisponibilidadService } from './disponibilidad.service';
 import {
   CreateOrdenDto,
@@ -27,6 +28,10 @@ export class OrdenesService {
     private readonly ordenRepo: Repository<OrdenTrabajo>,
     @InjectRepository(RepuestoOrden)
     private readonly repuestoRepo: Repository<RepuestoOrden>,
+    @InjectRepository(AsignacionConductor)
+    private readonly asigRepo: Repository<AsignacionConductor>,
+    @InjectRepository(Novedad)
+    private readonly novedadRepo: Repository<Novedad>,
     private readonly planesService: PlanesService,
   ) {}
 
@@ -123,7 +128,181 @@ export class OrdenesService {
       relations: ['vehiculo', 'tecnico', 'plan', 'repuestos', 'fotos'],
     });
     if (!orden) throw new NotFoundException(`Orden #${id} no encontrada`);
+
+    const novedad = await this.novedadRepo.findOne({
+      where: { ordenTrabajo: { id } },
+    });
+    if (novedad) {
+      (orden as any).novedad = {
+        id: novedad.id,
+        tipoNovedad: novedad.tipoNovedad,
+        descripcion: novedad.descripcion,
+        fechaReporte: novedad.fechaReporte,
+      };
+    }
+
     return orden;
+  }
+
+  async listarPorConductor(conductorId: number): Promise<any[]> {
+    const asignaciones = await this.asigRepo.find({
+      where: { conductor: { id: conductorId } },
+      relations: ['vehiculo'],
+    });
+
+    if (!asignaciones.length) return [];
+
+    const vehiculoIds = Array.from(
+      new Set(asignaciones.map((a) => a.vehiculo?.id).filter(Boolean)),
+    );
+
+    if (!vehiculoIds.length) return [];
+
+    const ordenes = await this.ordenRepo.find({
+      where: {
+        vehiculo: { id: In(vehiculoIds) },
+        estado: EstadoOrden.CERRADA,
+      },
+      relations: ['vehiculo', 'tecnico', 'plan'],
+      order: { fechaCierre: 'DESC', fechaApertura: 'DESC', id: 'DESC' },
+    });
+
+    return ordenes.map((o) => ({
+      id: o.id,
+      vehiculo: o.vehiculo
+        ? {
+            id: o.vehiculo.id,
+            placa: o.vehiculo.placa,
+            marca: o.vehiculo.marca,
+            modelo: o.vehiculo.modelo,
+            anio: o.vehiculo.anio,
+            kmActual: o.vehiculo.kmActual,
+            capacidad: o.vehiculo.capacidad,
+            numMotor: o.vehiculo.numMotor,
+            numChasis: o.vehiculo.numChasis,
+          }
+        : null,
+      tipoMantenimiento:
+        o.tipoMantenimiento ||
+        (o.plan ? TipoMantenimiento.PREVENTIVO : TipoMantenimiento.CORRECTIVO),
+      fechaOrden: o.fechaOrden,
+      fechaApertura: o.fechaApertura,
+      fechaCierre: o.fechaCierre,
+      estado: o.estado,
+      tecnico: o.tecnico ? { id: o.tecnico.id, nombre: o.tecnico.nombre } : null,
+      plan: o.plan ? { id: o.plan.id, nombre: o.plan.nombre } : null,
+      descripcion: o.descripcion,
+      costoManoObra: Number(o.costoManoObra || 0),
+      costoTotal: Number(o.costoTotal || 0),
+    }));
+  }
+
+  async buscarPorConductor(conductorId: number, id: number): Promise<any> {
+    const orden = await this.ordenRepo.findOne({
+      where: { id },
+      relations: ['vehiculo', 'tecnico', 'plan', 'repuestos', 'fotos'],
+    });
+
+    if (!orden) {
+      throw new NotFoundException(`Mantenimiento #${id} no encontrado`);
+    }
+
+    if (orden.estado !== EstadoOrden.CERRADA) {
+      throw new ForbiddenException(
+        'Solo se pueden consultar órdenes de mantenimiento cerradas',
+      );
+    }
+
+    if (!orden.vehiculo) {
+      throw new NotFoundException('Vehículo no asociado a esta orden');
+    }
+
+    const asignacion = await this.asigRepo.findOne({
+      where: {
+        conductor: { id: conductorId },
+        vehiculo: { id: orden.vehiculo.id },
+      },
+    });
+
+    if (!asignacion) {
+      throw new ForbiddenException(
+        'No tienes autorización para consultar el mantenimiento de este vehículo',
+      );
+    }
+
+    const novedad = await this.novedadRepo.findOne({
+      where: { ordenTrabajo: { id: orden.id } },
+    });
+
+    return {
+      id: orden.id,
+      fechaOrden: orden.fechaOrden,
+      fechaApertura: orden.fechaApertura,
+      fechaCierre: orden.fechaCierre,
+      estado: orden.estado,
+      tipoMantenimiento:
+        orden.tipoMantenimiento ||
+        (orden.plan ? TipoMantenimiento.PREVENTIVO : TipoMantenimiento.CORRECTIVO),
+      descripcion: orden.descripcion,
+      costoManoObra: Number(orden.costoManoObra || 0),
+      costoTotal: Number(orden.costoTotal || 0),
+      vehiculo: {
+        id: orden.vehiculo.id,
+        placa: orden.vehiculo.placa,
+        marca: orden.vehiculo.marca,
+        modelo: orden.vehiculo.modelo,
+        anio: orden.vehiculo.anio,
+        capacidad: orden.vehiculo.capacidad,
+        numMotor: orden.vehiculo.numMotor,
+        numChasis: orden.vehiculo.numChasis,
+        kmActual: orden.vehiculo.kmActual,
+      },
+      tecnico: orden.tecnico
+        ? {
+            id: orden.tecnico.id,
+            nombre: orden.tecnico.nombre,
+          }
+        : null,
+      plan: orden.plan
+        ? {
+            id: orden.plan.id,
+            nombre: orden.plan.nombre,
+          }
+        : null,
+      novedad: novedad
+        ? {
+            id: novedad.id,
+            tipoNovedad: novedad.tipoNovedad,
+            descripcion: novedad.descripcion,
+            fechaReporte: novedad.fechaReporte,
+          }
+        : null,
+      repuestos: (orden.repuestos || []).map((r) => ({
+        id: r.id,
+        nombreRepuesto: r.nombreRepuesto,
+        cantidad: r.cantidad,
+        precioUnitario: Number(r.precioUnitario || 0),
+        subtotal: Number(r.subtotal || 0),
+      })),
+      fotos: {
+        antes: (orden.fotos || [])
+          .filter((f) => f.tipoFoto === 'antes')
+          .map((f) => ({
+            id: f.id,
+            url: f.url,
+            tipoFoto: f.tipoFoto,
+            tomadaEn: f.tomadaEn,
+          })),
+        despues: (orden.fotos || [])
+          .filter((f) => f.tipoFoto === 'despues')
+          .map((f) => ({
+            id: f.id,
+            url: f.url,
+            tipoFoto: f.tipoFoto,
+            tomadaEn: f.tomadaEn,
+          })),
+      },
+    };
   }
 
   async listar(vehiculoId?: number): Promise<OrdenTrabajo[]> {

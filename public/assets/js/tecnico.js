@@ -590,16 +590,17 @@ async function abrirDetalleOrden(id) {
       html += `<div class="detalle-section"><h4><i class="fa-solid fa-images"></i> Galería de fotos</h4><p style="font-size:13px;color:var(--text-lt)">Sin fotos adjuntas.</p></div>`;
     }
 
-    // Botones de accion — alineados con el nuevo flujo de fotos obligatorias
-    if (o.estado === 'Abierta') {
-      html += `<div style="padding:14px 0;border-top:1.5px solid var(--slate-100);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <button class="btn-ghost btn-sm" onclick="closeModal('m-det-ord');abrirFotosAntesEIniciar(${id})"><i class="fa-solid fa-play"></i> Iniciar (requiere foto ANTES)</button>
-      </div>`;
-    } else if (o.estado === 'En proceso') {
-      html += `<div style="padding:14px 0;border-top:1.5px solid var(--slate-100);display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-        <button class="btn-ghost btn-sm" style="color:var(--green)" onclick="closeModal('m-det-ord');abrirCostosYCerrar(${id})"><i class="fa-solid fa-check"></i> Cerrar (requiere costos y foto DESPUÉS)</button>
-      </div>`;
-    }
+    window._ordenDetalleTecnicoActual = o;
+    html += `<div style="padding:14px 0;border-top:1.5px solid var(--slate-100);display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between">
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        ${o.estado === 'Abierta' ? `<button class="btn-ghost btn-sm" onclick="closeModal('m-det-ord');abrirFotosAntesEIniciar(${id})"><i class="fa-solid fa-play"></i> Iniciar (requiere foto ANTES)</button>` : ''}
+        ${o.estado === 'En proceso' ? `<button class="btn-ghost btn-sm" style="color:var(--green)" onclick="closeModal('m-det-ord');abrirCostosYCerrar(${id})"><i class="fa-solid fa-check"></i> Cerrar (requiere costos y foto DESPUÉS)</button>` : ''}
+      </div>
+      <button class="btn-primary btn-sm" onclick="window.generarReporteMantenimientoPDF(window._ordenDetalleTecnicoActual)" style="display:inline-flex;align-items:center;gap:6px">
+        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        Descargar reporte PDF
+      </button>
+    </div>`;
 
     document.getElementById('mdo-body').innerHTML = html;
   } catch (err) {

@@ -21,16 +21,21 @@ const repuesto_orden_entity_1 = require("./repuesto-orden.entity");
 const documento_legal_entity_1 = require("../documentos/documento-legal.entity");
 const asignacion_conductor_entity_1 = require("../asignaciones/asignacion_conductor.entity");
 const plan_mantenimiento_entity_1 = require("../planes/plan-mantenimiento.entity");
+const novedad_entity_1 = require("../novedades/entities/novedad.entity");
 const disponibilidad_service_1 = require("./disponibilidad.service");
 const planes_service_1 = require("../planes/planes.service");
 const usuario_entity_1 = require("../usuarios/usuario.entity");
 let OrdenesService = class OrdenesService {
     ordenRepo;
     repuestoRepo;
+    asigRepo;
+    novedadRepo;
     planesService;
-    constructor(ordenRepo, repuestoRepo, planesService) {
+    constructor(ordenRepo, repuestoRepo, asigRepo, novedadRepo, planesService) {
         this.ordenRepo = ordenRepo;
         this.repuestoRepo = repuestoRepo;
+        this.asigRepo = asigRepo;
+        this.novedadRepo = novedadRepo;
         this.planesService = planesService;
     }
     async crear(dto) {
@@ -102,7 +107,159 @@ let OrdenesService = class OrdenesService {
         });
         if (!orden)
             throw new common_1.NotFoundException(`Orden #${id} no encontrada`);
+        const novedad = await this.novedadRepo.findOne({
+            where: { ordenTrabajo: { id } },
+        });
+        if (novedad) {
+            orden.novedad = {
+                id: novedad.id,
+                tipoNovedad: novedad.tipoNovedad,
+                descripcion: novedad.descripcion,
+                fechaReporte: novedad.fechaReporte,
+            };
+        }
         return orden;
+    }
+    async listarPorConductor(conductorId) {
+        const asignaciones = await this.asigRepo.find({
+            where: { conductor: { id: conductorId } },
+            relations: ['vehiculo'],
+        });
+        if (!asignaciones.length)
+            return [];
+        const vehiculoIds = Array.from(new Set(asignaciones.map((a) => a.vehiculo?.id).filter(Boolean)));
+        if (!vehiculoIds.length)
+            return [];
+        const ordenes = await this.ordenRepo.find({
+            where: {
+                vehiculo: { id: (0, typeorm_2.In)(vehiculoIds) },
+                estado: orden_trabajo_entity_1.EstadoOrden.CERRADA,
+            },
+            relations: ['vehiculo', 'tecnico', 'plan'],
+            order: { fechaCierre: 'DESC', fechaApertura: 'DESC', id: 'DESC' },
+        });
+        return ordenes.map((o) => ({
+            id: o.id,
+            vehiculo: o.vehiculo
+                ? {
+                    id: o.vehiculo.id,
+                    placa: o.vehiculo.placa,
+                    marca: o.vehiculo.marca,
+                    modelo: o.vehiculo.modelo,
+                    anio: o.vehiculo.anio,
+                    kmActual: o.vehiculo.kmActual,
+                    capacidad: o.vehiculo.capacidad,
+                    numMotor: o.vehiculo.numMotor,
+                    numChasis: o.vehiculo.numChasis,
+                }
+                : null,
+            tipoMantenimiento: o.tipoMantenimiento ||
+                (o.plan ? orden_trabajo_entity_1.TipoMantenimiento.PREVENTIVO : orden_trabajo_entity_1.TipoMantenimiento.CORRECTIVO),
+            fechaOrden: o.fechaOrden,
+            fechaApertura: o.fechaApertura,
+            fechaCierre: o.fechaCierre,
+            estado: o.estado,
+            tecnico: o.tecnico ? { id: o.tecnico.id, nombre: o.tecnico.nombre } : null,
+            plan: o.plan ? { id: o.plan.id, nombre: o.plan.nombre } : null,
+            descripcion: o.descripcion,
+            costoManoObra: Number(o.costoManoObra || 0),
+            costoTotal: Number(o.costoTotal || 0),
+        }));
+    }
+    async buscarPorConductor(conductorId, id) {
+        const orden = await this.ordenRepo.findOne({
+            where: { id },
+            relations: ['vehiculo', 'tecnico', 'plan', 'repuestos', 'fotos'],
+        });
+        if (!orden) {
+            throw new common_1.NotFoundException(`Mantenimiento #${id} no encontrado`);
+        }
+        if (orden.estado !== orden_trabajo_entity_1.EstadoOrden.CERRADA) {
+            throw new common_1.ForbiddenException('Solo se pueden consultar órdenes de mantenimiento cerradas');
+        }
+        if (!orden.vehiculo) {
+            throw new common_1.NotFoundException('Vehículo no asociado a esta orden');
+        }
+        const asignacion = await this.asigRepo.findOne({
+            where: {
+                conductor: { id: conductorId },
+                vehiculo: { id: orden.vehiculo.id },
+            },
+        });
+        if (!asignacion) {
+            throw new common_1.ForbiddenException('No tienes autorización para consultar el mantenimiento de este vehículo');
+        }
+        const novedad = await this.novedadRepo.findOne({
+            where: { ordenTrabajo: { id: orden.id } },
+        });
+        return {
+            id: orden.id,
+            fechaOrden: orden.fechaOrden,
+            fechaApertura: orden.fechaApertura,
+            fechaCierre: orden.fechaCierre,
+            estado: orden.estado,
+            tipoMantenimiento: orden.tipoMantenimiento ||
+                (orden.plan ? orden_trabajo_entity_1.TipoMantenimiento.PREVENTIVO : orden_trabajo_entity_1.TipoMantenimiento.CORRECTIVO),
+            descripcion: orden.descripcion,
+            costoManoObra: Number(orden.costoManoObra || 0),
+            costoTotal: Number(orden.costoTotal || 0),
+            vehiculo: {
+                id: orden.vehiculo.id,
+                placa: orden.vehiculo.placa,
+                marca: orden.vehiculo.marca,
+                modelo: orden.vehiculo.modelo,
+                anio: orden.vehiculo.anio,
+                capacidad: orden.vehiculo.capacidad,
+                numMotor: orden.vehiculo.numMotor,
+                numChasis: orden.vehiculo.numChasis,
+                kmActual: orden.vehiculo.kmActual,
+            },
+            tecnico: orden.tecnico
+                ? {
+                    id: orden.tecnico.id,
+                    nombre: orden.tecnico.nombre,
+                }
+                : null,
+            plan: orden.plan
+                ? {
+                    id: orden.plan.id,
+                    nombre: orden.plan.nombre,
+                }
+                : null,
+            novedad: novedad
+                ? {
+                    id: novedad.id,
+                    tipoNovedad: novedad.tipoNovedad,
+                    descripcion: novedad.descripcion,
+                    fechaReporte: novedad.fechaReporte,
+                }
+                : null,
+            repuestos: (orden.repuestos || []).map((r) => ({
+                id: r.id,
+                nombreRepuesto: r.nombreRepuesto,
+                cantidad: r.cantidad,
+                precioUnitario: Number(r.precioUnitario || 0),
+                subtotal: Number(r.subtotal || 0),
+            })),
+            fotos: {
+                antes: (orden.fotos || [])
+                    .filter((f) => f.tipoFoto === 'antes')
+                    .map((f) => ({
+                    id: f.id,
+                    url: f.url,
+                    tipoFoto: f.tipoFoto,
+                    tomadaEn: f.tomadaEn,
+                })),
+                despues: (orden.fotos || [])
+                    .filter((f) => f.tipoFoto === 'despues')
+                    .map((f) => ({
+                    id: f.id,
+                    url: f.url,
+                    tipoFoto: f.tipoFoto,
+                    tomadaEn: f.tomadaEn,
+                })),
+            },
+        };
     }
     async listar(vehiculoId) {
         const where = vehiculoId ? { vehiculo: { id: vehiculoId } } : {};
@@ -202,7 +359,11 @@ exports.OrdenesService = OrdenesService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(orden_trabajo_entity_1.OrdenTrabajo)),
     __param(1, (0, typeorm_1.InjectRepository)(repuesto_orden_entity_1.RepuestoOrden)),
+    __param(2, (0, typeorm_1.InjectRepository)(asignacion_conductor_entity_1.AsignacionConductor)),
+    __param(3, (0, typeorm_1.InjectRepository)(novedad_entity_1.Novedad)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         planes_service_1.PlanesService])
 ], OrdenesService);

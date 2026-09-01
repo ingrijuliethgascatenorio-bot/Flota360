@@ -2352,3 +2352,285 @@ body {
   transition: background .15s;
 }
 .cierre-banner button:hover { background: #dbeafe; }
+
+/* ═══════════════════════════════════════════════════
+   MANTENIMIENTOS & MODAL STYLES (Conductor Portal)
+═══════════════════════════════════════════════════ */
+.mantenimientos-filtros {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  padding: 16px;
+  background: var(--slate-100);
+  border-radius: var(--r12);
+  margin-top: 14px;
+}
+
+.mant-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.mant-card {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r16);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--sh0);
+  transition: transform .2s, box-shadow .2s, border-color .2s;
+}
+
+.mant-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sh1);
+  border-color: #93c5fd;
+}
+
+.mant-card-hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.mant-placa {
+  font-family: var(--font2);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--navy);
+  letter-spacing: .5px;
+}
+
+.mant-veh-sub {
+  font-size: 12px;
+  color: var(--text-md);
+  margin-top: 2px;
+}
+
+.mant-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--r99);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.mant-badge.preventivo {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #93c5fd;
+}
+
+.mant-badge.correctivo {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fbbf24;
+}
+
+.mant-card-body {
+  background: var(--slate-100);
+  border-radius: var(--r8);
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.mant-stat-lbl {
+  color: var(--text-lt);
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.mant-stat-val {
+  color: var(--navy);
+  font-weight: 600;
+}
+
+.mant-desc-preview {
+  font-size: 12px;
+  color: var(--text-md);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.mant-card-footer {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.mant-card-footer .btn-sm {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--r8);
+  cursor: pointer;
+  transition: all .15s;
+}
+
+/* ── MODAL ENGINE ───────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(2, 13, 31, 0.55);
+  backdrop-filter: blur(2px);
+  z-index: 2000;
+  display: none;
+  align-items: center; justify-content: center;
+  padding: 20px;
+  opacity: 0; transition: opacity .2s ease;
+}
+.modal-overlay.open { display: flex; opacity: 1; }
+.modal-box {
+  background: var(--white);
+  border-radius: var(--r20);
+  width: 100%; max-width: 600px;
+  max-height: 90vh; overflow: hidden;
+  display: flex; flex-direction: column;
+  box-shadow: var(--sh2);
+  transform: scale(.96); transition: transform .2s ease;
+}
+.modal-overlay.open .modal-box { transform: scale(1); }
+.modal-box.modal-lg { max-width: 780px; }
+.modal-hdr {
+  padding: 16px 22px;
+  border-bottom: 1.5px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0;
+}
+.modal-title { font-size: 16px; font-weight: 700; color: var(--navy); font-family: var(--font2); }
+.modal-close {
+  width: 32px; height: 32px;
+  border-radius: var(--r8);
+  border: 1.5px solid var(--border);
+  background: var(--white); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; color: var(--text-lt);
+  transition: all .15s;
+}
+.modal-close:hover { background: var(--red-lt); color: var(--red); border-color: var(--red-lt); }
+.modal-body { overflow-y: auto; padding: 20px 22px; flex: 1; }
+.modal-footer {
+  display: flex; gap: 8px; justify-content: flex-end;
+  padding: 14px 22px;
+  border-top: 1.5px solid var(--border);
+  background: var(--slate-100);
+  flex-shrink: 0;
+}
+
+/* Detalle de secciones dentro del modal */
+.detalle-section {
+  margin-bottom: 18px;
+  background: var(--white);
+}
+.detalle-section h4 {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--navy);
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.detalle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  background: var(--slate-100);
+  border-radius: var(--r12);
+  padding: 12px 14px;
+}
+.dg-item {
+  display: flex;
+  flex-direction: column;
+}
+.dg-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-lt);
+  text-transform: uppercase;
+}
+.dg-val {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--navy);
+  margin-top: 2px;
+}
+
+/* Tabla de repuestos en modal */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  margin-top: 6px;
+}
+.data-table th {
+  background: var(--navy);
+  color: var(--white);
+  padding: 8px 10px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+}
+.data-table th:first-child { border-radius: 6px 0 0 0; }
+.data-table th:last-child { border-radius: 0 6px 0 0; text-align: right; }
+.data-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-md);
+}
+.data-table td:last-child { text-align: right; }
+
+/* Galería de fotos en modal */
+.galeria-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+.galeria-item {
+  border: 1px solid var(--border);
+  border-radius: var(--r8);
+  overflow: hidden;
+  background: var(--slate-100);
+  display: flex;
+  flex-direction: column;
+}
+.galeria-item img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  transition: transform .2s;
+}
+.galeria-item img:hover { transform: scale(1.04); }
+.galeria-meta {
+  padding: 5px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--navy);
+  background: #fff;
+  border-top: 1px solid var(--border);
+}
