@@ -581,8 +581,11 @@ async function abrirDetalleOrden(id) {
           const url = apiAssetUrl(f.url);
           const etiqueta = f.tipoFoto === 'antes' ? '🔵 ANTES' : f.tipoFoto === 'despues' ? '🟢 DESPUÉS' : (f.tipoFoto||'FOTO').toUpperCase();
           return `
-          <div class="galeria-item" onclick="window.open('${url}','_blank')" style="cursor:pointer">
-            <img src="${url}" alt="Foto" loading="lazy" onerror="this.src='';this.parentElement.style.background='var(--slate-100)'"/>
+          <div class="galeria-item" onclick="window.open('${url}','_blank')" style="cursor:pointer;position:relative">
+            <img src="${url}" alt="Foto" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+            <div style="display:none;height:100px;background:var(--slate-100);align-items:center;justify-content:center;font-size:11px;color:var(--text-lt);text-align:center;padding:10px">
+              ⚠️ Archivo no encontrado en VPS
+            </div>
             <div class="galeria-caption">${etiqueta} · ${fmtFecha(f.tomadaEn)}</div>
           </div>`;
         }).join('')}</div></div>`;

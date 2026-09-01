@@ -61,8 +61,23 @@ async function apiForm(method, path, formData) {
 function apiAssetUrl(url) {
   if (!url) return '';
   if (/^https?:\/\//i.test(url)) return url;
-  const normalized = String(url).replace(/\\/g, '/');
-  return `${API_BASE.replace(/\/api$/, '')}/${normalized.replace(/^\/+/, '')}`;
+
+  // Reemplazar barras invertidas de Windows a barras normales
+  let normalized = String(url).replace(/\\/g, '/');
+
+  // Si la cadena contiene 'uploads/' o 'ordenes/' extraer desde esa posición
+  const idxUploads = normalized.indexOf('uploads/');
+  if (idxUploads !== -1) {
+    normalized = normalized.substring(idxUploads);
+  } else {
+    const idxOrdenes = normalized.indexOf('ordenes/');
+    if (idxOrdenes !== -1) {
+      normalized = 'uploads/' + normalized.substring(idxOrdenes);
+    }
+  }
+
+  const base = API_BASE.replace(/\/api\/?$/, '');
+  return `${base}/${normalized.replace(/^\/+/, '')}`;
 }
 
 function clearSession() {

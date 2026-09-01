@@ -42,9 +42,21 @@ async function bootstrap() {
     ],
   });
 
-  // Archivos subidos
+  // Archivos subidos (con cabeceras CORS para permitir carga en PDF y frontend)
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads',
+    setHeaders: (res) => {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
+  });
+
+  app.useStaticAssets(join(process.cwd(), 'uploads'), {
+    prefix: '/api/uploads',
+    setHeaders: (res) => {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    },
   });
 
   // Frontend

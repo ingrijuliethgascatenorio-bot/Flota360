@@ -37,6 +37,17 @@ async function bootstrap() {
     });
     app.useStaticAssets((0, path_1.join)(process.cwd(), 'uploads'), {
         prefix: '/uploads',
+        setHeaders: (res) => {
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+        },
+    });
+    app.useStaticAssets((0, path_1.join)(process.cwd(), 'uploads'), {
+        prefix: '/api/uploads',
+        setHeaders: (res) => {
+            res.setHeader('Access-Control-Allow-Origin', '*');
+            res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+        },
     });
     app.useStaticAssets((0, path_1.join)(process.cwd(), 'public'), {
         prefix: '/',
