@@ -914,6 +914,17 @@ async function cargarTodosLosPlanesParaOrden() {
       const r = await api('GET', '/vehiculos');
       vehCache = Array.isArray(r) ? r : (r.data || []);
     }
+
+    // Consultar órdenes existentes para filtrar planes que ya tengan una orden activa (Abierta o En proceso)
+    const oRes = await api('GET', '/ordenes').catch(() => []);
+    const ordenesExistentes = Array.isArray(oRes) ? oRes : (oRes?.data || ordCache || []);
+
+    const planesConOrdenActiva = new Set(
+      ordenesExistentes
+        .filter(o => o.plan?.id && (o.estado === 'Abierta' || o.estado === 'En proceso'))
+        .map(o => Number(o.plan.id))
+    );
+
     const vehiculos = vehCache || [];
     const resultados = await Promise.all(
       vehiculos.map(v =>
@@ -922,7 +933,17 @@ async function cargarTodosLosPlanesParaOrden() {
           .catch(() => [])
       )
     );
-    planesOrdenCache = resultados.flat();
+
+    // Filtrar: únicamente planes activos y que NO tengan una orden de trabajo pendiente/activa
+    planesOrdenCache = resultados
+      .flat()
+      .filter(p => p.activo !== false && !planesConOrdenActiva.has(Number(p.id)));
+
+    if (!planesOrdenCache.length) {
+      select.innerHTML = '<option value="">— No hay planes preventivos pendientes —</option>';
+      return;
+    }
+
     select.innerHTML = '<option value="">— Seleccione plan —</option>' +
       planesOrdenCache.map(p => `<option value="${p.id}">${p.nombre} (${p.vehiculoPlaca})</option>`).join('');
   } catch (err) {
